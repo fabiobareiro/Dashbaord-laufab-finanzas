@@ -135,7 +135,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
       <div class="date-badge">1 de Marzo 2026</div>
       <div class="pill">
         <label>Ver mes</label>
-        <select id="msel" onchange="updMonth(this.value)"><option value="0" >Enero</option><option value="1" selected>Febrero</option></select>
+        <select id="msel" onchange="updMonth(this.value)"></select>
       </div>
     </div>
   </header>
@@ -148,30 +148,30 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
   <div class="kpi-grid">
     <div class="kpi">
       <div class="kpi-label">Ingresos del mes</div>
-      <div class="kpi-value green" id="kIngresos">$4.5M</div>
+      <div class="kpi-value green" id="kIngresos">$0</div>
       <div class="kpi-sub" id="kIngLabel">Febrero 2026</div>
       <div class="kpi-badge up">↑ Ingreso</div>
       <div class="kpi-accent green"></div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Egresos del mes</div>
-      <div class="kpi-value red" id="kEgresos">$2.5M</div>
+      <div class="kpi-value red" id="kEgresos">$0</div>
       <div class="kpi-sub" id="kEgrLabel">Febrero 2026</div>
       <div class="kpi-badge down">↓ Gasto</div>
       <div class="kpi-accent red"></div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Balance mensual</div>
-      <div class="kpi-value green" id="kBalance">$2.0M</div>
+      <div class="kpi-value green" id="kBalance">$0</div>
       <div class="kpi-sub">Resultado neto</div>
       <div class="kpi-badge up" id="kBalBadge">Positivo</div>
       <div class="kpi-accent blue"></div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Tasa de ahorro</div>
-      <div class="kpi-value blue" id="kTasa">45%</div>
+      <div class="kpi-value blue" id="kTasa">0%</div>
       <div class="kpi-sub">Del ingreso conservado</div>
-      <div class="kpi-badge neutral" id="kTasaBadge">Excelente</div>
+      <div class="kpi-badge neutral" id="kTasaBadge">Mejorable</div>
       <div class="kpi-accent amber"></div>
     </div>
   </div>
@@ -211,14 +211,14 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
         <div class="arc-container">
           <svg width="180" height="100" viewBox="0 0 180 100">
             <path d="M10,100 A80,80 0 0,1 170,100" fill="none" stroke="#E5E7EB" stroke-width="12" stroke-linecap="round"/>
-            <path id="arcPath" d="M10,100 A80,80 0 0,1 170,100" fill="none" stroke="url(#arcGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="138.15999999999997"/>
+            <path id="arcPath" d="M10,100 A80,80 0 0,1 170,100" fill="none" stroke="url(#arcGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="251.2"/>
             <defs><linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#4F6EF7"/><stop offset="100%" stop-color="#00C896"/></linearGradient></defs>
           </svg>
-          <div class="arc-center"><div class="arc-pct" id="arcPct">45%</div></div>
+          <div class="arc-center"><div class="arc-pct" id="arcPct">0%</div></div>
         </div>
         <div class="savings-detail">
-          <div class="sd-item"><div class="sd-label">Ingresado</div><div class="sd-val" style="color:var(--green)" id="sdIng">$4.5M</div></div>
-          <div class="sd-item"><div class="sd-label">Gastado</div><div class="sd-val" style="color:var(--red)" id="sdEgr">$2.5M</div></div>
+          <div class="sd-item"><div class="sd-label">Ingresado</div><div class="sd-val" style="color:var(--green)" id="sdIng">$0</div></div>
+          <div class="sd-item"><div class="sd-label">Gastado</div><div class="sd-val" style="color:var(--red)" id="sdEgr">$0</div></div>
         </div>
       </div>
     </div>
@@ -227,18 +227,18 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
   <div class="year-strip">
     <div class="ys-item">
       <div class="ys-label">Ingresos 2026</div>
-      <div class="ys-val green" id="ysIng">$7.8M</div>
+      <div class="ys-val green" id="ysIng">$4.5M</div>
       <div class="ys-sub">acumulado anual</div>
     </div>
     <div class="ys-item">
       <div class="ys-label">Egresos 2026</div>
-      <div class="ys-val red" id="ysEgr">$5.2M</div>
+      <div class="ys-val red" id="ysEgr">$2.5M</div>
       <div class="ys-sub">acumulado anual</div>
     </div>
     <div class="ys-item">
       <div class="ys-label">Balance 2026</div>
-      <div class="ys-val green" id="ysBal">$2.6M</div>
-      <div class="ys-sub" id="ysBalSub">tasa de ahorro 34%</div>
+      <div class="ys-val green" id="ysBal">$2.0M</div>
+      <div class="ys-sub" id="ysBalSub">tasa de ahorro 45%</div>
     </div>
   </div>
 
@@ -247,7 +247,7 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
 
 <script>
 const MN=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const AD={"0":{"ingresos":3277900,"egresos":2657749,"balance":620151,"byCategoria":{"Alimentación":722617,"Transporte":205967,"Ocio Y Salidas":231550,"Hogar":505000,"Estilo de Vida":75000,"Trabajo Y Negocio":228600,"Impuestos":402270,"Salud y Deporte":12000,"Finanzas y Futuro":211000,"Mascotas":63745},"byPersona":{"Laura":1660749,"Fabio":997000},"byPersonaIngresos":{"Laura":1611000,"Fabio":1442500}},"1":{"ingresos":4516620,"egresos":2493177,"balance":2023443,"byCategoria":{"Alimentación":498710,"Estilo de Vida":536917,"Gastos Operativos":809850,"Vivienda y Servicios":588700,"Telefonía":59000},"byPersona":{"Fabio":1609500,"Laura":883677},"byPersonaIngresos":{"Laura":3063620,"Fabio":1453000}}};
+const AD={};
 const YEAR=2026;
 const ML=["Enero"];
 const MI=[3277900];
@@ -404,7 +404,7 @@ function updPersona(p){
 window.addEventListener('DOMContentLoaded',()=>{
   PC=new Chart(document.getElementById('pieChart').getContext('2d'),{
     type:'doughnut',
-    data:{labels:['Ingresos','Egresos'],datasets:[{data:[4516620,2493177],backgroundColor:['#00C896','#FF3B5C'],borderColor:['#F8F7F4','#F8F7F4'],borderWidth:4,hoverOffset:6}]},
+    data:{labels:['Ingresos','Egresos'],datasets:[{data:[0,0],backgroundColor:['#00C896','#FF3B5C'],borderColor:['#F8F7F4','#F8F7F4'],borderWidth:4,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtFull(ctx.raw)}}}}
   });
   BC=new Chart(document.getElementById('barChart').getContext('2d'),{
@@ -421,8 +421,8 @@ window.addEventListener('DOMContentLoaded',()=>{
       y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'DM Sans',size:10},color:'#9CA3AF',callback:v=>fmtARS(v)},border:{display:false}}}}
   });
   // render inicial
-  document.getElementById('catList').innerHTML=buildCatList({"Alimentación":498710,"Estilo de Vida":536917,"Gastos Operativos":809850,"Vivienda y Servicios":588700,"Telefonía":59000});
-  document.getElementById('personaSplit').innerHTML=buildPersonaSplit({"ingresos":4516620,"egresos":2493177,"balance":2023443,"byCategoria":{"Alimentación":498710,"Estilo de Vida":536917,"Gastos Operativos":809850,"Vivienda y Servicios":588700,"Telefonía":59000},"byPersona":{"Fabio":1609500,"Laura":883677}}, 'todos', 'Febrero');
+  document.getElementById('catList').innerHTML=buildCatList({});
+  document.getElementById('personaSplit').innerHTML=buildPersonaSplit({"ingresos":0,"egresos":0,"balance":0,"byCategoria":{},"byPersona":{}}, 'todos', 'Febrero');
 });
 </script>
 </body>
