@@ -148,21 +148,21 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
   <div class="kpi-grid">
     <div class="kpi">
       <div class="kpi-label">Ingresos del mes</div>
-      <div class="kpi-value green" id="kIngresos">$4.5M</div>
+      <div class="kpi-value green" id="kIngresos">$9.0M</div>
       <div class="kpi-sub" id="kIngLabel">Febrero 2026</div>
       <div class="kpi-badge up">↑ Ingreso</div>
       <div class="kpi-accent green"></div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Egresos del mes</div>
-      <div class="kpi-value red" id="kEgresos">$2.5M</div>
+      <div class="kpi-value red" id="kEgresos">$5.0M</div>
       <div class="kpi-sub" id="kEgrLabel">Febrero 2026</div>
       <div class="kpi-badge down">↓ Gasto</div>
       <div class="kpi-accent red"></div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Balance mensual</div>
-      <div class="kpi-value green" id="kBalance">$2.0M</div>
+      <div class="kpi-value green" id="kBalance">$4.0M</div>
       <div class="kpi-sub">Resultado neto</div>
       <div class="kpi-badge up" id="kBalBadge">Positivo</div>
       <div class="kpi-accent blue"></div>
@@ -217,8 +217,8 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
           <div class="arc-center"><div class="arc-pct" id="arcPct">45%</div></div>
         </div>
         <div class="savings-detail">
-          <div class="sd-item"><div class="sd-label">Ingresado</div><div class="sd-val" style="color:var(--green)" id="sdIng">$4.5M</div></div>
-          <div class="sd-item"><div class="sd-label">Gastado</div><div class="sd-val" style="color:var(--red)" id="sdEgr">$2.5M</div></div>
+          <div class="sd-item"><div class="sd-label">Ingresado</div><div class="sd-val" style="color:var(--green)" id="sdIng">$9.0M</div></div>
+          <div class="sd-item"><div class="sd-label">Gastado</div><div class="sd-val" style="color:var(--red)" id="sdEgr">$5.0M</div></div>
         </div>
       </div>
     </div>
@@ -227,18 +227,18 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
   <div class="year-strip">
     <div class="ys-item">
       <div class="ys-label">Ingresos 2026</div>
-      <div class="ys-val green" id="ysIng">$7.8M</div>
+      <div class="ys-val green" id="ysIng">$12.3M</div>
       <div class="ys-sub">acumulado anual</div>
     </div>
     <div class="ys-item">
       <div class="ys-label">Egresos 2026</div>
-      <div class="ys-val red" id="ysEgr">$5.2M</div>
+      <div class="ys-val red" id="ysEgr">$7.6M</div>
       <div class="ys-sub">acumulado anual</div>
     </div>
     <div class="ys-item">
       <div class="ys-label">Balance 2026</div>
-      <div class="ys-val green" id="ysBal">$2.6M</div>
-      <div class="ys-sub" id="ysBalSub">tasa de ahorro 34%</div>
+      <div class="ys-val green" id="ysBal">$4.7M</div>
+      <div class="ys-sub" id="ysBalSub">tasa de ahorro 38%</div>
     </div>
   </div>
 
@@ -247,16 +247,16 @@ footer{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;let
 
 <script>
 const MN=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const AD={"0":{"ingresos":3277900,"egresos":2657749,"balance":620151,"byCategoria":{"Alimentación":722617,"Transporte":205967,"Ocio Y Salidas":231550,"Hogar":505000,"Estilo de Vida":75000,"Trabajo Y Negocio":228600,"Impuestos":402270,"Salud y Deporte":12000,"Finanzas y Futuro":211000,"Mascotas":63745},"byPersona":{"Laura":1660749,"Fabio":997000}},"1":{"ingresos":4516620,"egresos":2493177,"balance":2023443,"byCategoria":{"Alimentación":498710,"Estilo de Vida":536917,"Gastos Operativos":809850,"Vivienda y Servicios":588700,"Telefonía":59000},"byPersona":{"Fabio":1609500,"Laura":883677}}};
+const AD={"0":{"ingresos":6555800,"egresos":5315498,"balance":1240302,"byCategoria":{"Alimentación":1445234,"Transporte":411934,"Ocio Y Salidas":463100,"Hogar":1010000,"Estilo de Vida":150000,"Trabajo Y Negocio":457200,"Impuestos":804540,"Salud y Deporte":24000,"Finanzas y Futuro":422000,"Mascotas":127490},"byPersona":{"Laura":3321498,"Fabio":1994000},"byPersonaIngresos":{"Laura":3222000,"Fabio":2885000}},"1":{"ingresos":9033240,"egresos":4986354,"balance":4046886,"byCategoria":{"Alimentación":997420,"Estilo de Vida":1073834,"Gastos Operativos":1619700,"Vivienda y Servicios":1177400,"Telefonía":118000},"byPersona":{"Fabio":3219000,"Laura":1767354},"byPersonaIngresos":{"Laura":6127240,"Fabio":2906000}}};
 const YEAR=2026;
 const ML=["Enero","Febrero"];
-const MI=[3277900,4516620];
-const ME=[2657749,2493177];
-const MB=[620151,2023443];
+const MI=[6555800,9033240];
+const ME=[5315498,4986354];
+const MB=[1240302,4046886];
 const CC=["#6C63FF","#FF6584","#43C6AC","#FFB347","#4FC3F7","#A78BFA","#34D399","#FB923C"];
 const PC_COLORS=["#4F6EF7","#FF6584","#43C6AC","#FFB347"];
 const PERSONAS=["Laura","Fabio"];
-const MBP={"Laura":{"ingresos":[0,0],"egresos":[1660749,883677],"balance":[-1660749,-883677]},"Fabio":{"ingresos":[0,0],"egresos":[997000,1609500],"balance":[-997000,-1609500]}};
+const MBP={"Laura":{"ingresos":[3222000,6127240],"egresos":[3321498,1767354],"balance":[-99498,4359886]},"Fabio":{"ingresos":[2885000,2906000],"egresos":[1994000,3219000],"balance":[891000,-313000]}};
 
 let currentMonth=1;
 let currentPersona='todos';
@@ -404,7 +404,7 @@ function updPersona(p){
 window.addEventListener('DOMContentLoaded',()=>{
   PC=new Chart(document.getElementById('pieChart').getContext('2d'),{
     type:'doughnut',
-    data:{labels:['Ingresos','Egresos'],datasets:[{data:[4516620,2493177],backgroundColor:['#00C896','#FF3B5C'],borderColor:['#F8F7F4','#F8F7F4'],borderWidth:4,hoverOffset:6}]},
+    data:{labels:['Ingresos','Egresos'],datasets:[{data:[9033240,4986354],backgroundColor:['#00C896','#FF3B5C'],borderColor:['#F8F7F4','#F8F7F4'],borderWidth:4,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtFull(ctx.raw)}}}}
   });
   BC=new Chart(document.getElementById('barChart').getContext('2d'),{
@@ -421,8 +421,8 @@ window.addEventListener('DOMContentLoaded',()=>{
       y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'DM Sans',size:10},color:'#9CA3AF',callback:v=>fmtARS(v)},border:{display:false}}}}
   });
   // render inicial
-  document.getElementById('catList').innerHTML=buildCatList({"Alimentación":498710,"Estilo de Vida":536917,"Gastos Operativos":809850,"Vivienda y Servicios":588700,"Telefonía":59000});
-  document.getElementById('personaSplit').innerHTML=buildPersonaSplit({"ingresos":4516620,"egresos":2493177,"balance":2023443,"byCategoria":{"Alimentación":498710,"Estilo de Vida":536917,"Gastos Operativos":809850,"Vivienda y Servicios":588700,"Telefonía":59000},"byPersona":{"Fabio":1609500,"Laura":883677}}, 'todos', 'Febrero');
+  document.getElementById('catList').innerHTML=buildCatList({"Alimentación":997420,"Estilo de Vida":1073834,"Gastos Operativos":1619700,"Vivienda y Servicios":1177400,"Telefonía":118000});
+  document.getElementById('personaSplit').innerHTML=buildPersonaSplit({"ingresos":9033240,"egresos":4986354,"balance":4046886,"byCategoria":{"Alimentación":997420,"Estilo de Vida":1073834,"Gastos Operativos":1619700,"Vivienda y Servicios":1177400,"Telefonía":118000},"byPersona":{"Fabio":3219000,"Laura":1767354}}, 'todos', 'Febrero');
 });
 </script>
 </body>
