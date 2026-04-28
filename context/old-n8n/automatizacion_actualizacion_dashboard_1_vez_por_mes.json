@@ -1,0 +1,604 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "triggerAtHour": 17
+            }
+          ]
+        }
+      },
+      "id": "2741aea5-3c47-4367-82ee-03c0478444f6",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -352,
+        768
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs",
+          "mode": "list",
+          "cachedResultName": "Finanzas LAUFAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "ee7d9c6d-aacb-4ed8-9b8b-4bf4efcd1ec8",
+      "name": "Get Raw Transactions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        352,
+        640
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "543i8YYfs9Ly2Fhe",
+          "name": "Sheet FabioRBTech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs",
+          "mode": "list",
+          "cachedResultName": "Finanzas LAUFAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1836334829,
+          "mode": "list",
+          "cachedResultName": "Monthly Summary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit#gid=1836334829"
+        },
+        "options": {}
+      },
+      "id": "fd587a97-1399-4423-926a-a5734dd0694c",
+      "name": "Get Monthly Summary Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        352,
+        848
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "543i8YYfs9Ly2Fhe",
+          "name": "Sheet FabioRBTech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all().map(i => i.json);\nconst rawRows = allItems.filter(i => i['ID-TIME'] !== undefined);\nconst summaryRows = allItems.filter(i => i['MesNum'] !== undefined || i['Mes'] !== undefined);\n\nconst now = new Date();\nconst currentYear = now.getFullYear();\nconst prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);\nconst prevMonth = prevMonthDate.getMonth();\nconst prevMonthYear = prevMonthDate.getFullYear();\nconst monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];\nconst prevMonthName = monthNames[prevMonth];\nconst currentMonthName = monthNames[now.getMonth()];\n\nfunction parseImporte(val) {\n  if (val === null || val === undefined || val === '') return 0;\n  if (typeof val === 'number') return val;\n  const clean = String(val).replace(/\\$/g,'').replace(/\\./g,'').replace(',','.').trim();\n  const n = parseFloat(clean);\n  return isNaN(n) ? 0 : n;\n}\n\nfunction parseDate(val) {\n  if (!val) return null;\n  const m = String(val).trim().match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);\n  if (!m) return null;\n  return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1]));\n}\n\nfunction normalizeCategory(cat) {\n  if (!cat) return 'Sin Categoría';\n  const s = String(cat).trim().toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/\\s+/g,' ');\n  const map = [\n    [/finanzas.*(futuro|futr?)/,'Finanzas y Futuro'],\n    [/honorarios|venta.*servicio|servicio.*venta/,'Honorarios Profesionales'],\n    [/supermercado|almacen|aliment|viveres|verdura|pescad/,'Alimentación'],\n    [/suscri|servicio.*ia|ia.*servicio|openrouter|claude|chatgpt|digital/,'Suscripciones Digitales'],\n    [/gimnasio|deporte|suplemento|salud/,'Salud y Deporte'],\n    [/impuesto|afip|arba|arca|fiscal/,'Impuestos'],\n    [/telefon|celular|movil/,'Telefonía'],\n    [/mascota|veterinar/,'Mascotas'],\n    [/limpieza|mantenimiento|vivienda|materiale|bicarbonato/,'Vivienda y Servicios'],\n    [/gastos.*(operativo|oper)|operativo/,'Gastos Operativos'],\n    [/estilo|personal|ropa|indument/,'Estilo de Vida'],\n    [/trading|inversion|ganancia/,'Inversiones y Trading'],\n    [/capital.?inicial|saldo.?inicial/,'Capital Inicial']\n  ];\n  for (const [p,l] of map) if (p.test(s)) return l;\n  return String(cat).trim().replace(/\\b\\w/g,c=>c.toUpperCase());\n}\n\nfunction cleanKeys(row) {\n  const c = {};\n  for (const k of Object.keys(row)) c[k.trim()] = row[k];\n  return c;\n}\n\nconst parsed = rawRows.map(row => {\n  const r = cleanKeys(row);\n  const date = parseDate(r['ID-TIME']);\n  return {\n    date,\n    tipo: String(r['Tipo']||'').trim(),\n    persona: String(r['Persona']||'').trim(),\n    categoria: normalizeCategory(r['Categoría']||r['Categoria']||r['Categor\\u00eda']),\n    importe: parseImporte(r['Importe'])\n  };\n}).filter(r => r.date && r.importe > 0);\n\nfunction calcStats(data) {\n  const ingresos = data.filter(r=>r.tipo==='Ingreso'&&r.categoria!=='Capital Inicial').reduce((s,r)=>s+r.importe,0);\n  const egresos  = data.filter(r=>r.tipo==='Egreso').reduce((s,r)=>s+r.importe,0);\n  const byCategoria = {};\n  data.filter(r=>r.tipo==='Egreso').forEach(r=>{ byCategoria[r.categoria]=(byCategoria[r.categoria]||0)+r.importe; });\n  const byPersona = {};\n  data.filter(r=>r.tipo==='Egreso'&&r.persona&&r.persona!=='Sistema').forEach(r=>{ byPersona[r.persona]=(byPersona[r.persona]||0)+r.importe; });\n  // NUEVO: ingresos por persona\n  const byPersonaIngresos = {};\n  data.filter(r=>r.tipo==='Ingreso'&&r.categoria!=='Capital Inicial'&&r.persona&&r.persona!=='Sistema').forEach(r=>{ byPersonaIngresos[r.persona]=(byPersonaIngresos[r.persona]||0)+r.importe; });\n  // NUEVO: categorías por persona\n  const byPersonaCategorias = {};\n  data.filter(r=>r.tipo==='Egreso'&&r.persona&&r.persona!=='Sistema').forEach(r=>{\n    if(!byPersonaCategorias[r.persona]) byPersonaCategorias[r.persona]={};\n    byPersonaCategorias[r.persona][r.categoria]=(byPersonaCategorias[r.persona][r.categoria]||0)+r.importe;\n  });\n  return { ingresos, egresos, balance: ingresos-egresos, byCategoria, byPersona, byPersonaIngresos, byPersonaCategorias };\n}\n\nconst yearData = parsed.filter(r => r.date.getFullYear() === currentYear);\nconst monthlyEvolution = {};\nfor (let m = 0; m < 12; m++) {\n  const mData = yearData.filter(r => r.date.getMonth() === m);\n  if (mData.length > 0) {\n    const s = calcStats(mData);\n    monthlyEvolution[m] = { \n ingresos: s.ingresos,\n egresos: s.egresos,\n balance: s.balance,\n byCategoria: s.byCategoria,\n byPersona: s.byPersona,\n byPersonaIngresos: s.byPersonaIngresos,\n byPersonaCategorias: s.byPersonaCategorias\n};\n  }\n}\n\nconst prevMonthData = parsed.filter(r => r.date.getFullYear() === prevMonthYear && r.date.getMonth() === prevMonth);\nconst prevStats = calcStats(prevMonthData);\n\nconst newSummaryRow = {\n  Mes: prevMonthName,\n  Anio: prevMonthYear,\n  MesNum: prevMonth + 1,\n  Ingresos: prevStats.ingresos,\n  Egresos: prevStats.egresos,\n  Balance: prevStats.balance,\n  ByCategoria: JSON.stringify(prevStats.byCategoria),\n  ByPersona: JSON.stringify(prevStats.byPersona),\n  ByPersonaIngresos: JSON.stringify(prevStats.byPersonaIngresos)\n};\n\nconst historicalMonths = {};\n\n// 1) Tomar SOLO lo que está guardado en el sheet\nsummaryRows.forEach(row => {\n\n  const r = cleanKeys(row);\n\n  const anio = parseInt(r['Anio']||r['Año']||0);\n  const mesNum = parseInt(r['MesNum']||0);\n\n  if (!anio || !mesNum) return;\n\n  const key = `${anio}-${mesNum}`;\n\n  let byCategoria = {};\n  let byPersona = {};\n\n  try { byCategoria = JSON.parse(r['ByCategoria']||'{}'); } catch(e){}\n  try { byPersona   = JSON.parse(r['ByPersona']||'{}');   } catch(e){}\n\n  historicalMonths[key] = {\n    mes: String(r['Mes']||''),\n    anio,\n    mesNum,\n    ingresos: parseImporte(r['Ingresos']),\n    egresos: parseImporte(r['Egresos']),\n    balance: parseImporte(r['Balance']),\n    byCategoria,\n    byPersona\n  };\n\n});\n\n\n// 2) Solo si el mes NO existe usar el calculado\nconst currentKey = `${prevMonthYear}-${prevMonth+1}`;\n\nif (!historicalMonths[currentKey]) {\n\n historicalMonths[currentKey] = {\n\n mes: prevMonthName,\n anio: prevMonthYear,\n mesNum: prevMonth+1,\n\n ingresos: prevStats.ingresos,\n egresos: prevStats.egresos,\n balance: prevStats.balance,\n\n byCategoria: prevStats.byCategoria,\n byPersona: prevStats.byPersona\n\n };\n\n}\n\nconst yearMonths = Object.values(historicalMonths).filter(m => m.anio === currentYear);\nconst yearIngresos = yearMonths.reduce((s,m)=>s+m.ingresos,0);\nconst yearEgresos  = yearMonths.reduce((s,m)=>s+m.egresos,0);\nconst yearBalance  = yearIngresos - yearEgresos;\nconst yearByCat = {};\nyearMonths.forEach(m => { Object.entries(m.byCategoria).forEach(([k,v]) => { yearByCat[k]=(yearByCat[k]||0)+v; }); });\n\nconst allMonthsAvailable = Object.keys(monthlyEvolution).map(Number).sort((a,b)=>a-b);\n\nreturn [{\n  json: {\n    prevMonth, prevMonthYear, prevMonthName, currentMonthName, currentYear,\n    monthStats: { ingresos: prevStats.ingresos, egresos: prevStats.egresos, balance: prevStats.balance, byCategoria: prevStats.byCategoria, byPersona: prevStats.byPersona, byPersonaCategorias: prevStats.byPersonaCategorias },\n    yearStats: { ingresos: yearIngresos, egresos: yearEgresos, balance: yearBalance, byCategoria: yearByCat },\n    monthlyEvolution, monthNames, allMonthsAvailable, newSummaryRow\n  }\n}];\n"
+      },
+      "id": "bec51687-3956-49ce-9022-ad4da7726a2e",
+      "name": "Process Financial Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.first().json;\nconst { monthlyEvolution, monthNames, currentYear } = allItems;\n\nconst mergeItems = $('Merge').all().map(i => i.json);\nconst summaryRows = mergeItems.filter(i => i['MesNum'] !== undefined || i['Mes'] !== undefined);\n\nconst existing = summaryRows.map(r => {\n  const c = {};\n  for (const k of Object.keys(r)) c[k.trim()] = r[k];\n  return c;\n});\n\nconst savedKeys = new Set(existing.map(r => `${r['Anio']||r['Año']}-${r['MesNum']}`));\n\nconst rowsToAppend = [];\nfor (const mIdx of Object.keys(monthlyEvolution).map(Number).sort((a,b)=>a-b)) {\n  const key = `${currentYear}-${mIdx+1}`;\n  if (savedKeys.has(key)) continue;\n  const m = monthlyEvolution[mIdx];\n  rowsToAppend.push({\n  Mes: monthNames[mIdx],\n  Anio: currentYear,\n  MesNum: mIdx + 1,\n  Ingresos: m.ingresos,\n  Egresos: m.egresos,\n  Balance: m.balance,\n  ByCategoria: JSON.stringify(m.byCategoria),\n  ByPersona: JSON.stringify(m.byPersona),\n  ByPersonaIngresos: JSON.stringify(m.byPersonaIngresos),\n  ByPersonaCategorias: JSON.stringify(m.byPersonaCategorias || {})\n});\n}\n\nif (rowsToAppend.length > 0) {\n  return rowsToAppend.map(r => ({ json: r }));\n}\nreturn [{ json: { _skip: true } }];\n"
+      },
+      "id": "d22ab5c3-d1b2-4cb0-a210-78db2857c2b7",
+      "name": "Backfill Missing Months",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "86a766db-9b14-4494-b532-041040862457",
+      "name": "Has Rows to Save?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs",
+          "mode": "list",
+          "cachedResultName": "Finanzas LAUFAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1836334829,
+          "mode": "list",
+          "cachedResultName": "Monthly Summary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit#gid=1836334829"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Mes": "={{ $json.Mes }}",
+            "Anio": "={{ $json.Anio }}",
+            "MesNum": "={{ $json.MesNum }}",
+            "Ingresos": "={{ $json.Ingresos }}",
+            "Egresos": "={{ $json.Egresos }}",
+            "Balance": "={{ $json.Balance }}",
+            "ByCategoria": "={{ $json.ByCategoria }}",
+            "ByPersona": "={{ $json.ByPersona }}",
+            "ByPersonaIngresos": "={{ $json.ByPersonaIngresos }}",
+            "ByPersonaCategorias": "={{ $json.ByPersonaCategorias }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Mes",
+              "displayName": "Mes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Anio",
+              "displayName": "Anio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "MesNum",
+              "displayName": "MesNum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Ingresos",
+              "displayName": "Ingresos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Egresos",
+              "displayName": "Egresos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Balance",
+              "displayName": "Balance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ByCategoria",
+              "displayName": "ByCategoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ByPersona",
+              "displayName": "ByPersona",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ByPersonaIngresos",
+              "displayName": "ByPersonaIngresos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ByPersonaCategorias",
+              "displayName": "ByPersonaCategorias",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "ebdec4ce-50ad-4977-9c78-a1464b8d872d",
+      "name": "Save Monthly Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1600,
+        864
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "543i8YYfs9Ly2Fhe",
+          "name": "Sheet FabioRBTech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Process Financial Data').first().json;\nlet summaryRows;\ntry {\n  summaryRows = $('Re-Read Monthly Summary').all().map(i => i.json);\n  if (!summaryRows || summaryRows.length === 0) throw new Error('empty');\n} catch(e) {\n  summaryRows = $('Get Monthly Summary Sheet').all().map(i => i.json);\n}\n\nfunction parseImporte(val){\n if(!val) return 0;\n if(typeof val==='number') return val;\n return parseFloat(String(val).replace(/\\./g,'').replace(',','.'))||0;\n}\n\nconst cleanRow=r=>{\n const c={};\n Object.keys(r).forEach(k=>c[k.trim()]=r[k]);\n return c;\n};\n\nconst summaryMonths = summaryRows\n .map(cleanRow)\n .filter(r=>parseInt(r.Anio)===data.currentYear)\n .sort((a,b)=>parseInt(a.MesNum)-parseInt(b.MesNum));\nconst { prevMonthName, prevMonth, currentMonthName, currentYear, monthStats, yearStats, monthlyEvolution, monthNames, allMonthsAvailable } = data;\n\nconst monthlyLabels   = summaryMonths.map(m=>m.Mes);\nconst monthlyIngresos = summaryMonths.map(m=>parseImporte(m.Ingresos));\nconst monthlyEgresos  = summaryMonths.map(m=>parseImporte(m.Egresos));\nconst monthlyBalance  = summaryMonths.map(m=>parseImporte(m.Balance));\n\n// Personas\nconst personas = [...new Set(\n summaryMonths.flatMap(m=>{\n  try{ return Object.keys(JSON.parse(m.ByPersona||'{}')); }catch(e){ return []; }\n })\n)].filter(p=>p!=='Sistema');\n\n// Monthly by persona (for bar chart per persona)\nconst monthlyByPersona = {};\npersonas.forEach(p=>{\n monthlyByPersona[p]={\n  ingresos: summaryMonths.map(m=>{\n   try{ return JSON.parse(m.ByPersonaIngresos||'{}')[p]||0; }catch(e){ return 0; }\n  }),\n  egresos: summaryMonths.map(m=>{\n   try{ return JSON.parse(m.ByPersona||'{}')[p]||0; }catch(e){ return 0; }\n  })\n };\n monthlyByPersona[p].balance = monthlyByPersona[p].ingresos.map((v,i)=>v-monthlyByPersona[p].egresos[i]);\n});\n\n// ByPersonaCategorias per summary month (for per-persona category view)\nconst monthlyByPersonaCategorias = {};\nsummaryMonths.forEach((m, idx) => {\n try {\n  monthlyByPersonaCategorias[idx] = JSON.parse(m.ByPersonaCategorias || '{}');\n } catch(e) {\n  monthlyByPersonaCategorias[idx] = {};\n }\n});\n\nconst monthSelectorOptions = allMonthsAvailable.map(m =>\n  `<option value=\"${m}\" ${m===prevMonth?'selected':''}>${monthNames[m]}</option>`\n).join('');\n\nfunction fmtARS(n) {\n  if (Math.abs(n) >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';\n  if (Math.abs(n) >= 1000) return '$' + Math.round(n/1000) + 'K';\n  return '$' + Math.round(n);\n}\nfunction fmtFull(n) {\n  return new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:0,maximumFractionDigits:0}).format(n);\n}\n\nconst tasa = monthStats.ingresos > 0 ? Math.round((monthStats.balance / monthStats.ingresos) * 100) : 0;\nconst tasaYear = yearStats.ingresos > 0 ? Math.round((yearStats.balance / yearStats.ingresos) * 100) : 0;\nconst catColors = ['#6C63FF','#FF6584','#43C6AC','#FFB347','#4FC3F7','#A78BFA','#34D399','#FB923C'];\nconst personaColors = ['#4F6EF7','#FF6584','#43C6AC','#FFB347'];\n\nconst html = `<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n<title>Finanzas ${currentYear}</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n<link href=\"https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap\" rel=\"stylesheet\">\n<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"><\\/script>\n<style>\n*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}\n:root{\n  --ink:#0D0D0D;--ink2:#1A1A1A;--mid:#6B7280;--soft:#9CA3AF;--line:#E5E7EB;\n  --bg:#F8F7F4;--card:#FFFFFF;--green:#00C896;--green-dim:#D1F7EE;\n  --red:#FF3B5C;--red-dim:#FFE0E6;--blue:#4F6EF7;--blue-dim:#E0E7FF;\n  --amber:#F59E0B;--r:16px;--rs:10px;\n  --sh:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.06);\n  --sh2:0 4px 24px rgba(0,0,0,.08);\n}\nbody{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}\n.page{max-width:1200px;margin:0 auto;padding:40px 32px;}\n\n.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;flex-wrap:wrap;gap:16px;}\n.eyebrow{font-family:'Syne',sans-serif;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--soft);margin-bottom:6px;}\n.title{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--ink);letter-spacing:-1px;line-height:1;}\n.title span{color:var(--blue);}\n.subtitle{font-size:14px;color:var(--mid);margin-top:6px;font-weight:300;}\n.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}\n.pill{display:flex;align-items:center;gap:8px;background:var(--card);border:1.5px solid var(--line);border-radius:40px;padding:9px 16px;box-shadow:var(--sh);}\n.pill label{font-size:11px;font-weight:500;color:var(--soft);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;}\n.pill select{border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:transparent;cursor:pointer;}\n.date-badge{font-size:12px;color:var(--mid);background:var(--card);border:1.5px solid var(--line);border-radius:40px;padding:9px 14px;font-weight:400;white-space:nowrap;}\n\n.persona-tabs{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;}\n.ptab{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:8px 20px;border-radius:40px;border:1.5px solid var(--line);background:var(--card);color:var(--mid);cursor:pointer;transition:all .18s;box-shadow:var(--sh);}\n.ptab:hover{border-color:var(--blue);color:var(--blue);}\n.ptab.active{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600;}\n.ptab.active.laura{background:#4F6EF7;border-color:#4F6EF7;}\n.ptab.active.fabio{background:#FF6584;border-color:#FF6584;}\n\n.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}\n.kpi{background:var(--card);border-radius:var(--r);padding:22px 24px;box-shadow:var(--sh);position:relative;overflow:hidden;transition:box-shadow .2s;}\n.kpi:hover{box-shadow:var(--sh2);}\n.kpi-label{font-size:11px;font-weight:500;color:var(--soft);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}\n.kpi-value{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-1px;line-height:1;}\n.kpi-value.green{color:var(--green);}.kpi-value.red{color:var(--red);}.kpi-value.blue{color:var(--blue);}\n.kpi-sub{font-size:12px;color:var(--mid);margin-top:7px;font-weight:300;}\n.kpi-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:9px;}\n.kpi-badge.up{background:var(--green-dim);color:#00875F;}\n.kpi-badge.down{background:var(--red-dim);color:#C0002A;}\n.kpi-badge.neutral{background:var(--blue-dim);color:var(--blue);}\n.kpi-accent{position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 var(--r) var(--r);}\n.kpi-accent.green{background:linear-gradient(90deg,var(--green),#43C6AC);}\n.kpi-accent.red{background:linear-gradient(90deg,var(--red),#FF8FA3);}\n.kpi-accent.blue{background:linear-gradient(90deg,var(--blue),#818CF8);}\n.kpi-accent.amber{background:linear-gradient(90deg,var(--amber),#FCD34D);}\n\n.main-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:20px;}\n.bottom-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px;}\n.card{background:var(--card);border-radius:var(--r);padding:26px;box-shadow:var(--sh);transition:box-shadow .2s;}\n.card:hover{box-shadow:var(--sh2);}\n.section-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.3px;margin-bottom:3px;}\n.section-sub{font-size:12px;color:var(--mid);font-weight:300;margin-bottom:18px;}\n\n.cat-list{display:flex;flex-direction:column;gap:9px;}\n.cat-item{display:flex;align-items:center;gap:10px;}\n.cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}\n.cat-name{font-size:13px;color:var(--ink);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}\n.cat-bar-wrap{flex:2;background:var(--line);border-radius:4px;height:5px;overflow:hidden;}\n.cat-bar{height:100%;border-radius:4px;transition:width .5s cubic-bezier(.4,0,.2,1);}\n.cat-amt{font-size:12px;font-weight:500;color:var(--ink);font-family:'Syne',sans-serif;min-width:52px;text-align:right;}\n\n.persona-split{display:grid;gap:10px;}\n.ps-card{background:var(--bg);border-radius:var(--rs);padding:14px 16px;}\n.ps-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}\n.ps-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;flex-shrink:0;}\n.ps-name{font-size:13px;font-weight:600;color:var(--ink);}\n.ps-pct{font-size:11px;color:var(--mid);margin-left:auto;}\n.ps-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}\n.ps-stat{text-align:center;}\n.ps-stat-label{font-size:10px;color:var(--soft);text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px;}\n.ps-stat-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}\n.ps-bar-wrap{margin-top:10px;background:var(--line);border-radius:4px;height:4px;overflow:hidden;}\n.ps-bar{height:100%;border-radius:4px;transition:width .5s;}\n\n.savings-wrap{display:flex;flex-direction:column;align-items:center;padding:4px 0;}\n.arc-container{position:relative;width:180px;height:100px;overflow:hidden;margin-bottom:8px;}\n.arc-container svg{position:absolute;top:0;left:0;}\n.arc-center{position:absolute;bottom:0;left:50%;transform:translateX(-50%);text-align:center;padding-bottom:2px;}\n.arc-pct{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--ink);line-height:1;}\n.savings-detail{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:10px;}\n.sd-item{background:var(--bg);border-radius:var(--rs);padding:10px;text-align:center;}\n.sd-label{font-size:10px;color:var(--soft);text-transform:uppercase;letter-spacing:.5px;}\n.sd-val{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-top:3px;}\n\n.year-strip{background:var(--ink2);border-radius:var(--r);padding:26px 32px;display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:20px;}\n.ys-item{text-align:center;position:relative;}\n.ys-item:not(:last-child)::after{content:'';position:absolute;right:0;top:20%;bottom:20%;width:1px;background:rgba(255,255,255,.1);}\n.ys-label{font-size:10px;font-weight:500;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}\n.ys-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-1px;}\n.ys-val.green{color:var(--green);}.ys-val.red{color:#FF6B86;}\n.ys-sub{font-size:11px;color:rgba(255,255,255,.3);margin-top:4px;}\n\nfooter{text-align:center;font-size:11px;color:var(--soft);padding:20px 0 8px;letter-spacing:.3px;}\n\n@media(max-width:900px){\n  .kpi-grid{grid-template-columns:repeat(2,1fr);}\n  .main-grid,.bottom-grid{grid-template-columns:1fr;}\n  .year-strip{grid-template-columns:1fr;gap:16px;}\n  .ys-item::after{display:none;}\n  .page{padding:24px 16px;}\n  .title{font-size:24px;}\n}\n<\\/style>\n</head>\n<body>\n<div class=\"page\">\n\n  <header class=\"header\">\n    <div class=\"header-left\">\n      <div class=\"eyebrow\">Reporte Familiar<\\/div>\n      <div class=\"title\">Dashboard <span>${currentYear}<\\/span><\\/div>\n      <div class=\"subtitle\">Generado el 1 de ${currentMonthName} · Datos de ${prevMonthName}<\\/div>\n    <\\/div>\n    <div class=\"header-right\">\n      <div class=\"date-badge\">1 de ${currentMonthName} ${currentYear}<\\/div>\n      <div class=\"pill\">\n        <label>Ver mes<\\/label>\n        <select id=\"msel\" onchange=\"updMonth(this.value)\">${monthSelectorOptions}<\\/select>\n      <\\/div>\n    <\\/div>\n  <\\/header>\n\n  <div class=\"persona-tabs\">\n    <button class=\"ptab active\" onclick=\"updPersona('todos')\" id=\"tab-todos\">👥 Todos<\\/button>\n    ${personas.map((p,i)=>`<button class=\"ptab\" onclick=\"updPersona('${p}')\" id=\"tab-${p.toLowerCase()}\">${p}<\\/button>`).join('')}\n  <\\/div>\n\n  <div class=\"kpi-grid\">\n    <div class=\"kpi\">\n      <div class=\"kpi-label\">Ingresos del mes<\\/div>\n      <div class=\"kpi-value green\" id=\"kIngresos\">${fmtARS(monthStats.ingresos)}<\\/div>\n      <div class=\"kpi-sub\" id=\"kIngLabel\">${prevMonthName} ${currentYear}<\\/div>\n      <div class=\"kpi-badge up\">↑ Ingreso<\\/div>\n      <div class=\"kpi-accent green\"><\\/div>\n    <\\/div>\n    <div class=\"kpi\">\n      <div class=\"kpi-label\">Egresos del mes<\\/div>\n      <div class=\"kpi-value red\" id=\"kEgresos\">${fmtARS(monthStats.egresos)}<\\/div>\n      <div class=\"kpi-sub\" id=\"kEgrLabel\">${prevMonthName} ${currentYear}<\\/div>\n      <div class=\"kpi-badge down\">↓ Gasto<\\/div>\n      <div class=\"kpi-accent red\"><\\/div>\n    <\\/div>\n    <div class=\"kpi\">\n      <div class=\"kpi-label\">Balance mensual<\\/div>\n      <div class=\"kpi-value ${monthStats.balance>=0?'green':'red'}\" id=\"kBalance\">${fmtARS(monthStats.balance)}<\\/div>\n      <div class=\"kpi-sub\">Resultado neto<\\/div>\n      <div class=\"kpi-badge ${monthStats.balance>=0?'up':'down'}\" id=\"kBalBadge\">${monthStats.balance>=0?'Positivo':'Negativo'}<\\/div>\n      <div class=\"kpi-accent blue\"><\\/div>\n    <\\/div>\n    <div class=\"kpi\">\n      <div class=\"kpi-label\">Tasa de ahorro<\\/div>\n      <div class=\"kpi-value blue\" id=\"kTasa\">${tasa}%<\\/div>\n      <div class=\"kpi-sub\">Del ingreso conservado<\\/div>\n      <div class=\"kpi-badge neutral\" id=\"kTasaBadge\">${tasa>=30?'Excelente':tasa>=15?'Bueno':'Mejorable'}<\\/div>\n      <div class=\"kpi-accent amber\"><\\/div>\n    <\\/div>\n  <\\/div>\n\n  <div class=\"main-grid\">\n    <div class=\"card\">\n      <div class=\"section-title\" id=\"barTitle\">Evolución ${currentYear}<\\/div>\n      <div class=\"section-sub\" id=\"barSub\">Ingresos vs egresos por mes<\\/div>\n      <div style=\"position:relative;height:240px;\"><canvas id=\"barChart\"><\\/canvas><\\/div>\n    <\\/div>\n    <div class=\"card\">\n      <div class=\"section-title\">Distribución<\\/div>\n      <div class=\"section-sub\" id=\"pieSub\">${prevMonthName} · ingresos vs egresos<\\/div>\n      <div style=\"position:relative;height:190px;display:flex;align-items:center;justify-content:center;\"><canvas id=\"pieChart\"><\\/canvas><\\/div>\n      <div style=\"display:flex;justify-content:center;gap:20px;margin-top:14px;\">\n        <div style=\"display:flex;align-items:center;gap:6px;\"><span style=\"width:9px;height:9px;border-radius:50%;background:#00C896;display:inline-block;\"><\\/span><span style=\"font-size:12px;color:var(--mid);\">Ingresos<\\/span><\\/div>\n        <div style=\"display:flex;align-items:center;gap:6px;\"><span style=\"width:9px;height:9px;border-radius:50%;background:#FF3B5C;display:inline-block;\"><\\/span><span style=\"font-size:12px;color:var(--mid);\">Egresos<\\/span><\\/div>\n      <\\/div>\n    <\\/div>\n  <\\/div>\n\n  <div class=\"bottom-grid\">\n    <div class=\"card\">\n      <div class=\"section-title\">Top Categorías<\\/div>\n      <div class=\"section-sub\" id=\"catSub\">${prevMonthName} · egresos<\\/div>\n      <div class=\"cat-list\" id=\"catList\"><\\/div>\n    <\\/div>\n    <div class=\"card\">\n      <div class=\"section-title\">Por Persona<\\/div>\n      <div class=\"section-sub\" id=\"psSub\">${prevMonthName} · desglose<\\/div>\n      <div class=\"persona-split\" id=\"personaSplit\"><\\/div>\n    <\\/div>\n    <div class=\"card\">\n      <div class=\"section-title\">Tasa de Ahorro<\\/div>\n      <div class=\"section-sub\" id=\"arcSub\">${prevMonthName} · del ingreso<\\/div>\n      <div class=\"savings-wrap\">\n        <div class=\"arc-container\">\n          <svg width=\"180\" height=\"100\" viewBox=\"0 0 180 100\">\n            <path d=\"M10,100 A80,80 0 0,1 170,100\" fill=\"none\" stroke=\"#E5E7EB\" stroke-width=\"12\" stroke-linecap=\"round\"/>\n            <path id=\"arcPath\" d=\"M10,100 A80,80 0 0,1 170,100\" fill=\"none\" stroke=\"url(#arcGrad)\" stroke-width=\"12\" stroke-linecap=\"round\" stroke-dasharray=\"251.2\" stroke-dashoffset=\"${251.2-(251.2*Math.min(Math.max(tasa,0),100)/100)}\"/>\n            <defs><linearGradient id=\"arcGrad\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"0%\"><stop offset=\"0%\" stop-color=\"#4F6EF7\"/><stop offset=\"100%\" stop-color=\"#00C896\"/><\\/linearGradient><\\/defs>\n          <\\/svg>\n          <div class=\"arc-center\"><div class=\"arc-pct\" id=\"arcPct\">${tasa}%<\\/div><\\/div>\n        <\\/div>\n        <div class=\"savings-detail\">\n          <div class=\"sd-item\"><div class=\"sd-label\">Ingresado<\\/div><div class=\"sd-val\" style=\"color:var(--green)\" id=\"sdIng\">${fmtARS(monthStats.ingresos)}<\\/div><\\/div>\n          <div class=\"sd-item\"><div class=\"sd-label\">Gastado<\\/div><div class=\"sd-val\" style=\"color:var(--red)\" id=\"sdEgr\">${fmtARS(monthStats.egresos)}<\\/div><\\/div>\n        <\\/div>\n      <\\/div>\n    <\\/div>\n  <\\/div>\n\n  <div class=\"year-strip\">\n    <div class=\"ys-item\">\n      <div class=\"ys-label\">Ingresos ${currentYear}<\\/div>\n      <div class=\"ys-val green\" id=\"ysIng\">${fmtARS(yearStats.ingresos)}<\\/div>\n      <div class=\"ys-sub\">acumulado anual<\\/div>\n    <\\/div>\n    <div class=\"ys-item\">\n      <div class=\"ys-label\">Egresos ${currentYear}<\\/div>\n      <div class=\"ys-val red\" id=\"ysEgr\">${fmtARS(yearStats.egresos)}<\\/div>\n      <div class=\"ys-sub\">acumulado anual<\\/div>\n    <\\/div>\n    <div class=\"ys-item\">\n      <div class=\"ys-label\">Balance ${currentYear}<\\/div>\n      <div class=\"ys-val ${yearStats.balance>=0?'green':'red'}\" id=\"ysBal\">${fmtARS(yearStats.balance)}<\\/div>\n      <div class=\"ys-sub\" id=\"ysBalSub\">tasa de ahorro ${tasaYear}%<\\/div>\n    <\\/div>\n  <\\/div>\n\n  <footer>LAUFAB · Dashboard Financiero ${currentYear} · Generado el 1 de ${currentMonthName}<\\/footer>\n<\\/div>\n\n<script>\nconst MN=${JSON.stringify(monthNames)};\nconst AD=${JSON.stringify(monthlyEvolution)};\nconst YEAR=${currentYear};\nconst ML=${JSON.stringify(monthlyLabels)};\nconst MI=${JSON.stringify(monthlyIngresos)};\nconst ME=${JSON.stringify(monthlyEgresos)};\nconst MB=${JSON.stringify(monthlyBalance)};\nconst CC=${JSON.stringify(catColors)};\nconst PC_COLORS=${JSON.stringify(personaColors)};\nconst PERSONAS=${JSON.stringify(personas)};\nconst MBP=${JSON.stringify(monthlyByPersona)};\nconst MBPC=${JSON.stringify(monthlyByPersonaCategorias)};\n\nlet currentMonth=${prevMonth};\nlet currentPersona='todos';\nlet PC,BC;\n\nfunction fmtARS(n){if(Math.abs(n)>=1000000)return'$'+(n/1000000).toFixed(1)+'M';if(Math.abs(n)>=1000)return'$'+Math.round(n/1000)+'K';return'$'+Math.round(n);}\nfunction fmtFull(n){return new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:0}).format(n);}\n\nfunction getFilteredData(monthIdx, persona) {\n  const d = AD[monthIdx];\n  if (!d) return { ingresos:0, egresos:0, balance:0, byCategoria:{}, byPersona:{}, byPersonaIngresos:{} };\n  if (persona === 'todos') return d;\n  const personaCats = d.byPersonaCategorias?.[persona] || {};\n  return {\n    ingresos: d.byPersonaIngresos?.[persona] || 0,\n    egresos: d.byPersona?.[persona] || 0,\n    balance: (d.byPersonaIngresos?.[persona]||0) - (d.byPersona?.[persona]||0),\n    byCategoria: personaCats,\n    byPersona: { [persona]: d.byPersona?.[persona]||0 },\n    byPersonaIngresos: { [persona]: d.byPersonaIngresos?.[persona]||0 }\n  };\n}\n\nfunction getYearFiltered(persona) {\n  let ing=0,egr=0;\n  Object.values(AD).forEach(d=>{\n    if(persona==='todos'){ing+=d.ingresos||0;egr+=d.egresos||0;}\n    else{ing+=(d.byPersonaIngresos?.[persona]||0);egr+=(d.byPersona?.[persona]||0);}\n  });\n  return {ingresos:ing,egresos:egr,balance:ing-egr};\n}\n\nfunction buildCatList(byCategoria){\n  const entries=Object.entries(byCategoria).sort((a,b)=>b[1]-a[1]).slice(0,5);\n  const maxVal=entries[0]?.[1]||1;\n  if(!entries.length) return '<div style=\"color:#9CA3AF;font-size:13px;padding:8px 0;\">Sin datos<\\/div>';\n  return entries.map(([name,val],i)=>{\n    const pct=Math.round((val/maxVal)*100);\n    return '<div class=\"cat-item\"><div class=\"cat-dot\" style=\"background:'+CC[i%CC.length]+';\"><\\/div><div class=\"cat-name\">'+name+'<\\/div><div class=\"cat-bar-wrap\"><div class=\"cat-bar\" style=\"width:'+pct+'%;background:'+CC[i%CC.length]+';\"><\\/div><\\/div><div class=\"cat-amt\">'+fmtARS(val)+'<\\/div><\\/div>';\n  }).join('');\n}\n\nfunction buildPersonaSplit(d, persona, mn){\n  if(persona !== 'todos') return '<div style=\"color:#9CA3AF;font-size:12px;padding:8px 0;\">Vista individual activa · '+persona+'<\\/div>';\n  const totalEgr = Object.values(d.byPersona||{}).reduce((s,v)=>s+v,0);\n  return PERSONAS.map((p,i)=>{\n    const pIng = d.byPersonaIngresos?.[p]||0;\n    const pEgr = d.byPersona?.[p]||0;\n    const pBal = pIng - pEgr;\n    const pct = totalEgr > 0 ? Math.round((pEgr/totalEgr)*100) : 0;\n    const initials = p.substring(0,2).toUpperCase();\n    const col = PC_COLORS[i%PC_COLORS.length];\n    return '<div class=\"ps-card\">'+\n      '<div class=\"ps-header\">'+\n        '<div class=\"ps-avatar\" style=\"background:'+col+'22;color:'+col+';\">'+initials+'<\\/div>'+\n        '<div class=\"ps-name\">'+p+'<\\/div>'+\n        '<div class=\"ps-pct\">'+pct+'% del gasto<\\/div>'+\n      '<\\/div>'+\n      '<div class=\"ps-row\">'+\n        '<div class=\"ps-stat\"><div class=\"ps-stat-label\">Ingresos<\\/div><div class=\"ps-stat-val\" style=\"color:#00C896;\">'+fmtARS(pIng)+'<\\/div><\\/div>'+\n        '<div class=\"ps-stat\"><div class=\"ps-stat-label\">Egresos<\\/div><div class=\"ps-stat-val\" style=\"color:#FF3B5C;\">'+fmtARS(pEgr)+'<\\/div><\\/div>'+\n        '<div class=\"ps-stat\"><div class=\"ps-stat-label\">Balance<\\/div><div class=\"ps-stat-val\" style=\"color:'+(pBal>=0?'#00C896':'#FF3B5C')+';\">'+fmtARS(pBal)+'<\\/div><\\/div>'+\n      '<\\/div>'+\n      '<div class=\"ps-bar-wrap\"><div class=\"ps-bar\" style=\"width:'+pct+'%;background:'+col+';\"><\\/div><\\/div>'+\n    '<\\/div>';\n  }).join('');\n}\n\nfunction updateArc(t){\n  const c=Math.min(Math.max(t,0),100);\n  const p=document.getElementById('arcPath');\n  if(p)p.setAttribute('stroke-dashoffset',251.2-(251.2*c/100));\n  const ap=document.getElementById('arcPct');\n  if(ap)ap.textContent=c+'%';\n}\n\nfunction renderAll(monthIdx, persona){\n  const d = getFilteredData(monthIdx, persona);\n  const mn = MN[monthIdx];\n  const ing=d.ingresos||0, egr=d.egresos||0, bal=d.balance||0;\n  const t = ing>0?Math.round((bal/ing)*100):0;\n\n  document.getElementById('kIngresos').textContent=fmtARS(ing);\n  document.getElementById('kIngLabel').textContent=mn+' '+YEAR;\n  document.getElementById('kEgresos').textContent=fmtARS(egr);\n  document.getElementById('kEgrLabel').textContent=mn+' '+YEAR;\n  const bEl=document.getElementById('kBalance');\n  bEl.textContent=fmtARS(bal);\n  bEl.className='kpi-value '+(bal>=0?'green':'red');\n  document.getElementById('kBalBadge').textContent=bal>=0?'Positivo':'Negativo';\n  document.getElementById('kBalBadge').className='kpi-badge '+(bal>=0?'up':'down');\n  document.getElementById('kTasa').textContent=t+'%';\n  document.getElementById('kTasaBadge').textContent=t>=30?'Excelente':t>=15?'Bueno':'Mejorable';\n  document.getElementById('pieSub').textContent=mn+' · '+(persona==='todos'?'ingresos vs egresos':persona);\n  document.getElementById('catSub').textContent=mn+' · '+(persona==='todos'?'egresos':'egresos de '+persona);\n  document.getElementById('psSub').textContent=mn+' · desglose';\n  document.getElementById('arcSub').textContent=mn+' · '+(persona==='todos'?'del ingreso':persona);\n  document.getElementById('sdIng').textContent=fmtARS(ing);\n  document.getElementById('sdEgr').textContent=fmtARS(egr);\n  updateArc(t);\n  PC.data.datasets[0].data=[ing,egr];\n  PC.update();\n  document.getElementById('catList').innerHTML=buildCatList(d.byCategoria||{});\n  document.getElementById('personaSplit').innerHTML=buildPersonaSplit(d,persona,mn);\n\n  // bar chart\n  let bLabels,bIng,bEgr,bBal;\n  if(persona==='todos'){\n    bLabels=ML;bIng=MI;bEgr=ME;bBal=MB;\n  } else {\n    const mbp=MBP[persona]||{ingresos:[],egresos:[],balance:[]};\n    bLabels=ML;bIng=mbp.ingresos;bEgr=mbp.egresos;bBal=mbp.balance;\n  }\n  BC.data.labels=bLabels;\n  BC.data.datasets[0].data=bIng;\n  BC.data.datasets[1].data=bEgr;\n  BC.data.datasets[2].data=bBal;\n  BC.update();\n\n  // year strip\n  const yr=getYearFiltered(persona);\n  const yrTasa=yr.ingresos>0?Math.round((yr.balance/yr.ingresos)*100):0;\n  document.getElementById('ysIng').textContent=fmtARS(yr.ingresos);\n  document.getElementById('ysEgr').textContent=fmtARS(yr.egresos);\n  const ysB=document.getElementById('ysBal');\n  ysB.textContent=fmtARS(yr.balance);\n  ysB.className='ys-val '+(yr.balance>=0?'green':'red');\n  document.getElementById('ysBalSub').textContent='tasa de ahorro '+yrTasa+'%';\n}\n\nfunction updMonth(mi){\n  currentMonth=parseInt(mi);\n  renderAll(currentMonth, currentPersona);\n}\n\nfunction updPersona(p){\n  currentPersona=p;\n  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active','laura','fabio'));\n  const active=document.getElementById('tab-'+p.toLowerCase());\n  if(active){active.classList.add('active');if(p!=='todos')active.classList.add(p.toLowerCase());}\n  renderAll(currentMonth, currentPersona);\n}\n\nwindow.addEventListener('DOMContentLoaded',()=>{\n  PC=new Chart(document.getElementById('pieChart').getContext('2d'),{\n    type:'doughnut',\n    data:{labels:['Ingresos','Egresos'],datasets:[{data:[${monthStats.ingresos},${monthStats.egresos}],backgroundColor:['#00C896','#FF3B5C'],borderColor:['#F8F7F4','#F8F7F4'],borderWidth:4,hoverOffset:6}]},\n    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtFull(ctx.raw)}}}}\n  });\n  BC=new Chart(document.getElementById('barChart').getContext('2d'),{\n    type:'bar',\n    data:{labels:ML,datasets:[\n      {label:'Ingresos',data:MI,backgroundColor:'rgba(0,200,150,.15)',borderColor:'#00C896',borderWidth:1.5,borderRadius:6,borderSkipped:false},\n      {label:'Egresos',data:ME,backgroundColor:'rgba(255,59,92,.12)',borderColor:'#FF3B5C',borderWidth:1.5,borderRadius:6,borderSkipped:false},\n      {label:'Balance',data:MB,type:'line',borderColor:'#4F6EF7',borderWidth:2,pointRadius:4,pointBackgroundColor:'#4F6EF7',pointBorderColor:'#F8F7F4',pointBorderWidth:2,fill:false,tension:.4}\n    ]},\n    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},\n      plugins:{legend:{position:'top',align:'end',labels:{font:{family:'DM Sans',size:11},usePointStyle:true,pointStyleWidth:8,padding:16,color:'#6B7280'}},\n      tooltip:{backgroundColor:'#0D0D0D',titleColor:'#fff',bodyColor:'rgba(255,255,255,.7)',padding:12,cornerRadius:8,callbacks:{label:ctx=>' '+fmtFull(ctx.raw)}}},\n      scales:{x:{grid:{display:false},ticks:{font:{family:'DM Sans',size:11},color:'#9CA3AF'}},\n      y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{family:'DM Sans',size:10},color:'#9CA3AF',callback:v=>fmtARS(v)},border:{display:false}}}}\n  });\n  document.getElementById('catList').innerHTML=buildCatList(${JSON.stringify(monthStats.byCategoria||{})});\n  document.getElementById('personaSplit').innerHTML=buildPersonaSplit(${JSON.stringify({...monthStats})}, 'todos', '${prevMonthName}');\n});\n<\\/script>\n</body>\n</html>`;\n\nreturn [{ json: { html_dashboard: html, prevMonthName, currentMonthName, currentYear } }];\n"
+      },
+      "id": "fc3fe8c0-9af3-401e-907d-3e982cbfa5fc",
+      "name": "Generate HTML Dashboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "edit",
+        "owner": {
+          "__rl": true,
+          "value": "fabiobareiro",
+          "mode": "list",
+          "cachedResultName": "fabiobareiro",
+          "cachedResultUrl": "https://github.com/fabiobareiro"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "Dashbaord-laufab-finanzas",
+          "mode": "list",
+          "cachedResultName": "Dashbaord-laufab-finanzas",
+          "cachedResultUrl": "https://github.com/fabiobareiro/Dashbaord-laufab-finanzas"
+        },
+        "filePath": "=index.html",
+        "fileContent": "={{ $json.html_dashboard }}",
+        "commitMessage": "=📊 Reporte {{ $json.prevMonthName }} {{ $json.currentYear }} generado el 1 de {{ $json.currentMonthName }}"
+      },
+      "id": "a96f395a-2d05-4933-8883-6dacfbd2dcaf",
+      "name": "Push to GitHub",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        2304,
+        736
+      ],
+      "webhookId": "746d7954-1846-4991-b197-300735be9306",
+      "credentials": {
+        "githubApi": {
+          "id": "MIGLP6E3uioKruy1",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "ffabiobareiro@gmail.com, lauurossi@gmail.com",
+        "subject": "={{ $json.emailSubject }}",
+        "message": "={{ $json.emailHtml }}",
+        "options": {}
+      },
+      "id": "ebaa9b39-063f-467c-815d-ff02286fd284",
+      "name": "Send Gmail Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2736,
+        736
+      ],
+      "webhookId": "95e9c643-7d0f-4c52-80c6-e74399701f34",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YZT8OpbNSQxpZ9DQ",
+          "name": "Gmail Fabio"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -48,
+        768
+      ],
+      "id": "ad0610ac-5c27-4db1-838c-66e9aa4fe5bf",
+      "name": "Wait",
+      "webhookId": "d2b86a3d-7ef8-4f65-9aca-d554960bf994"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        624,
+        736
+      ],
+      "id": "71754024-6e0d-4e6e-bf6c-2d3049a1d03d",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Process Financial Data').first().json;\nconst { prevMonthName, currentMonthName, currentYear, monthStats } = data;\n\nfunction fmtARS(n) {\n  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);\n}\n\nconst ing = fmtARS(monthStats.ingresos);\nconst egr = fmtARS(monthStats.egresos);\nconst bal = fmtARS(monthStats.balance);\nconst tasa = monthStats.ingresos > 0 ? Math.round((monthStats.balance / monthStats.ingresos) * 100) : 0;\nconst balColor = monthStats.balance >= 0 ? '#00C896' : '#FF3B5C';\nconst tasaLabel = tasa >= 30 ? 'Excelente' : tasa >= 15 ? 'Bueno' : 'Mejorable';\nconst tasaColor = tasa >= 30 ? '#00C896' : tasa >= 15 ? '#4F6EF7' : '#FF3B5C';\n\nconst html = `<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n</head>\n<body style=\"margin:0;padding:0;background-color:#F4F3F0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#F4F3F0;padding:40px 16px;\">\n<tr><td align=\"center\">\n<table role=\"presentation\" width=\"560\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);\">\n\n<tr><td style=\"background-color:#0D0D0D;padding:36px 32px 28px;\">\n<p style=\"margin:0 0 8px;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.4);\">Dashboard Financiero Familiar</p>\n<h1 style=\"margin:0;font-size:24px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;line-height:1.3;\">Reporte de ${prevMonthName} ${currentYear}</h1>\n<p style=\"margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.4);\">Generado el 1 de ${currentMonthName} &middot; Datos actualizados</p>\n</td></tr>\n\n<tr><td style=\"background-color:#0D0D0D;padding:0 32px 24px;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr>\n<td style=\"height:1px;background:linear-gradient(90deg,rgba(255,255,255,0.05),rgba(255,255,255,0.15),rgba(255,255,255,0.05));\"></td>\n</tr></table>\n</td></tr>\n\n<tr><td style=\"padding:32px;\">\n\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:24px;\">\n<tr>\n<td width=\"33%\" style=\"padding:0 4px 0 0;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#F8F7F4;border-radius:12px;\">\n<tr><td style=\"padding:16px;text-align:center;\">\n<p style=\"margin:0 0 6px;font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;\">Ingresos</p>\n<p style=\"margin:0;font-size:18px;font-weight:800;color:#00C896;letter-spacing:-0.5px;\">${ing}</p>\n</td></tr></table>\n</td>\n<td width=\"33%\" style=\"padding:0 2px;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#F8F7F4;border-radius:12px;\">\n<tr><td style=\"padding:16px;text-align:center;\">\n<p style=\"margin:0 0 6px;font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;\">Egresos</p>\n<p style=\"margin:0;font-size:18px;font-weight:800;color:#FF3B5C;letter-spacing:-0.5px;\">${egr}</p>\n</td></tr></table>\n</td>\n<td width=\"33%\" style=\"padding:0 0 0 4px;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#F8F7F4;border-radius:12px;\">\n<tr><td style=\"padding:16px;text-align:center;\">\n<p style=\"margin:0 0 6px;font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;\">Balance</p>\n<p style=\"margin:0;font-size:18px;font-weight:800;color:${balColor};letter-spacing:-0.5px;\">${bal}</p>\n</td></tr></table>\n</td>\n</tr>\n</table>\n\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#F0EFFF;border-radius:12px;margin-bottom:28px;\">\n<tr><td style=\"padding:16px;text-align:center;\">\n<p style=\"margin:0 0 4px;font-size:10px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.5px;\">Tasa de Ahorro</p>\n<p style=\"margin:0;font-size:28px;font-weight:800;color:${tasaColor};\">${tasa}%</p>\n<p style=\"margin:4px 0 0;font-size:11px;color:#6B7280;\">${tasaLabel}</p>\n</td></tr>\n</table>\n\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-bottom:24px;\">\n<tr><td align=\"center\">\n<a href=\"https://dashbaord-laufab-finanzas.vercel.app/\" target=\"_blank\" style=\"display:inline-block;background-color:#0D0D0D;color:#ffffff;text-decoration:none;border-radius:10px;padding:16px 40px;font-size:15px;font-weight:600;letter-spacing:0.3px;text-align:center;\">\nVer Dashboard completo &rarr;\n</a>\n</td></tr>\n</table>\n\n<p style=\"margin:0;font-size:12px;color:#9CA3AF;text-align:center;line-height:1.7;\">\nReporte generado autom&aacute;ticamente el 1 de cada mes.<br>\nPod&eacute;s ver el historial completo en el dashboard.\n</p>\n\n</td></tr>\n\n<tr><td style=\"padding:20px 32px;background-color:#F8F7F4;border-top:1px solid #E5E7EB;\">\n<p style=\"margin:0;font-size:11px;color:#9CA3AF;text-align:center;letter-spacing:0.3px;\">LAUFAB &middot; Dashboard Financiero ${currentYear}</p>\n</td></tr>\n\n</table>\n</td></tr>\n</table>\n</body>\n</html>`;\n\nconst subject = '\\u{1F4CA} Reporte ' + prevMonthName + ' ' + currentYear + ' \\u00B7 Tu dashboard est\\u00E1 listo';\n\nreturn [{ json: { emailHtml: html, emailSubject: subject } }];\n"
+      },
+      "id": "0784516c-a2ff-4f77-9b58-30a429494535",
+      "name": "Build Email HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2512,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs",
+          "mode": "list",
+          "cachedResultName": "Finanzas LAUFAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1836334829,
+          "mode": "list",
+          "cachedResultName": "Monthly Summary",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit#gid=1836334829"
+        },
+        "options": {}
+      },
+      "id": "e9692110-e893-43da-85f3-0825ffaa2b37",
+      "name": "Re-Read Monthly Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1808,
+        864
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "543i8YYfs9Ly2Fhe",
+          "name": "Sheet FabioRBTech"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Raw Transactions": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Monthly Summary Sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Process Financial Data": {
+      "main": [
+        [
+          {
+            "node": "Backfill Missing Months",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backfill Missing Months": {
+      "main": [
+        [
+          {
+            "node": "Has Rows to Save?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Rows to Save?": {
+      "main": [
+        [
+          {
+            "node": "Generate HTML Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Monthly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Monthly Summary": {
+      "main": [
+        [
+          {
+            "node": "Re-Read Monthly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate HTML Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Push to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push to GitHub": {
+      "main": [
+        [
+          {
+            "node": "Build Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Raw Transactions",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Monthly Summary Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Process Financial Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email HTML": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-Read Monthly Summary": {
+      "main": [
+        [
+          {
+            "node": "Generate HTML Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6ef92507f7a8c3da451280e82baad0772ecc51dccaf10d19b03c69dec2ebf34a"
+  }
+}

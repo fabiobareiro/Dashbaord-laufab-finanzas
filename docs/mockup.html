@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LAUFAB · Finanzas Familiares</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root[data-theme="light"]{
+  --bg:#FAFAF7; --surface:#FFFFFF; --surface-2:#F4F4F0;
+  --ink:#0A0A0A; --ink-2:#3A3A3A; --mid:#6B6B6B; --soft:#A0A0A0;
+  --line:#EBEBE5; --line-2:#E0E0DA;
+  --green:#00B383; --green-bg:#E6F7F1;
+  --red:#E8425A; --red-bg:#FCE8EC;
+  --blue:#4F6EF7; --blue-bg:#EEF1FF;
+  --amber:#E89B2C; --amber-bg:#FCF3E1;
+  --shadow-sm:0 1px 2px rgba(10,10,10,.04);
+  --shadow:0 1px 3px rgba(10,10,10,.06), 0 8px 24px rgba(10,10,10,.04);
+  --shadow-lg:0 4px 12px rgba(10,10,10,.08), 0 20px 40px rgba(10,10,10,.06);
+}
+:root[data-theme="dark"]{
+  --bg:#0E0E0C; --surface:#16161410; --surface-2:#1F1F1C;
+  --ink:#F5F5F0; --ink-2:#D8D8D2; --mid:#999; --soft:#666;
+  --line:#26262240; --line-2:#33332E;
+  --green:#22D49A; --green-bg:#0F2A22;
+  --red:#FF6B7E; --red-bg:#2D1820;
+  --blue:#7B8FFF; --blue-bg:#1A1E36;
+  --amber:#FFB454; --amber-bg:#2E2415;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 3px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  --shadow-lg:0 4px 12px rgba(0,0,0,.5), 0 20px 40px rgba(0,0,0,.4);
+}
+:root[data-theme="dark"] .surface{background:#1A1A18}
+
+body{
+  font-family:'Inter',-apple-system,sans-serif;
+  background:var(--bg); color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh; line-height:1.5;
+  transition:background .3s, color .3s;
+}
+
+/* ─── TOP BAR ─── */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:rgba(250,250,247,.85); backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--line);
+}
+:root[data-theme="dark"] .topbar{background:rgba(14,14,12,.85)}
+.topbar-inner{
+  max-width:1280px; margin:0 auto;
+  padding:14px 28px; display:flex; align-items:center; gap:24px;
+}
+.brand{display:flex; align-items:center; gap:10px; font-family:'Syne',sans-serif; font-weight:800; font-size:18px; letter-spacing:-.5px;}
+.brand-dot{width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--blue),var(--green)); display:grid; place-items:center; color:#fff; font-size:13px; font-weight:800;}
+.nav{display:flex; gap:2px; margin-left:24px;}
+.nav a{
+  padding:8px 14px; border-radius:8px; color:var(--mid);
+  font-size:14px; font-weight:500; cursor:pointer;
+  transition:all .15s; text-decoration:none;
+}
+.nav a:hover{color:var(--ink); background:var(--surface-2);}
+.nav a.active{color:var(--ink); background:var(--surface-2); font-weight:600;}
+.topbar-right{margin-left:auto; display:flex; align-items:center; gap:8px;}
+.icon-btn{
+  width:36px; height:36px; border-radius:8px;
+  border:1px solid var(--line); background:var(--surface);
+  display:grid; place-items:center; cursor:pointer;
+  color:var(--mid); transition:all .15s;
+}
+.icon-btn:hover{color:var(--ink); border-color:var(--line-2);}
+.avatar{
+  width:32px; height:32px; border-radius:50%;
+  background:linear-gradient(135deg,#FF6584,#FFB347);
+  display:grid; place-items:center;
+  color:#fff; font-weight:700; font-size:12px; cursor:pointer;
+}
+
+/* ─── PAGE ─── */
+.page{max-width:1280px; margin:0 auto; padding:32px 28px 80px;}
+
+/* ─── HERO + QUICK ADD ─── */
+.hero{margin-bottom:32px;}
+.greeting{font-family:'Syne',sans-serif; font-size:28px; font-weight:700; letter-spacing:-1px; margin-bottom:4px;}
+.greeting span{color:var(--mid); font-weight:500;}
+.subgreeting{color:var(--mid); font-size:14px; margin-bottom:20px;}
+
+.quick-add{
+  background:var(--surface); border:1.5px solid var(--line);
+  border-radius:14px; padding:6px; display:flex; align-items:center; gap:10px;
+  box-shadow:var(--shadow-sm); transition:all .2s;
+}
+.quick-add:focus-within{border-color:var(--blue); box-shadow:0 0 0 4px var(--blue-bg);}
+.quick-add-icon{
+  width:38px; height:38px; border-radius:10px;
+  background:var(--blue-bg); color:var(--blue);
+  display:grid; place-items:center; flex-shrink:0;
+}
+.quick-add input{
+  flex:1; border:0; outline:0; background:transparent;
+  font:500 15px 'Inter'; color:var(--ink); padding:8px 0;
+}
+.quick-add input::placeholder{color:var(--soft);}
+.quick-add-hint{font-size:12px; color:var(--soft); margin-right:10px;}
+.btn-primary{
+  background:var(--ink); color:var(--bg); border:0;
+  padding:10px 18px; border-radius:10px;
+  font:600 14px 'Inter'; cursor:pointer; transition:opacity .15s;
+}
+.btn-primary:hover{opacity:.85;}
+.quick-suggestions{display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;}
+.suggestion{
+  font-size:12px; padding:5px 10px; border-radius:20px;
+  background:var(--surface-2); color:var(--mid); cursor:pointer;
+  border:1px solid transparent; transition:all .15s;
+}
+.suggestion:hover{border-color:var(--line-2); color:var(--ink);}
+
+/* ─── PERSON TABS ─── */
+.person-row{display:flex; gap:8px; margin:28px 0 20px; align-items:center;}
+.person-tab{
+  padding:8px 16px; border-radius:24px; border:1.5px solid var(--line);
+  background:var(--surface); color:var(--mid); cursor:pointer;
+  font:500 13px 'Inter'; display:flex; align-items:center; gap:8px;
+  transition:all .15s;
+}
+.person-tab:hover{border-color:var(--line-2);}
+.person-tab.active{background:var(--ink); border-color:var(--ink); color:var(--bg);}
+.person-dot{width:8px; height:8px; border-radius:50%;}
+.period-select{
+  margin-left:auto; display:flex; gap:4px; padding:4px;
+  background:var(--surface-2); border-radius:10px;
+}
+.period-select button{
+  border:0; background:transparent; padding:6px 12px;
+  border-radius:7px; font:500 12px 'Inter'; color:var(--mid); cursor:pointer;
+}
+.period-select button.active{background:var(--surface); color:var(--ink); box-shadow:var(--shadow-sm);}
+
+/* ─── KPIs ─── */
+.kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px;}
+.kpi{
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:14px; padding:20px; box-shadow:var(--shadow-sm);
+  transition:all .2s; cursor:pointer;
+}
+.kpi:hover{box-shadow:var(--shadow); transform:translateY(-1px);}
+.kpi-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
+.kpi-label{font-size:12px; color:var(--mid); font-weight:500; letter-spacing:.2px;}
+.kpi-icon{
+  width:30px; height:30px; border-radius:8px;
+  display:grid; place-items:center; font-size:14px;
+}
+.kpi-icon.green{background:var(--green-bg); color:var(--green);}
+.kpi-icon.red{background:var(--red-bg); color:var(--red);}
+.kpi-icon.blue{background:var(--blue-bg); color:var(--blue);}
+.kpi-icon.amber{background:var(--amber-bg); color:var(--amber);}
+.kpi-value{
+  font-family:'Syne',sans-serif; font-size:24px; font-weight:700;
+  letter-spacing:-1px; margin-bottom:6px;
+}
+.kpi-value.green{color:var(--green);}
+.kpi-value.red{color:var(--red);}
+.kpi-trend{display:flex; align-items:center; gap:4px; font-size:11px; color:var(--mid);}
+.kpi-trend.up{color:var(--green);}
+.kpi-trend.down{color:var(--red);}
+
+/* ─── MAIN GRID ─── */
+.grid-2{display:grid; grid-template-columns:1.6fr 1fr; gap:18px; margin-bottom:18px;}
+.card{
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:14px; padding:22px; box-shadow:var(--shadow-sm);
+}
+.card-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
+.card-title{font-family:'Syne',sans-serif; font-size:15px; font-weight:700;}
+.card-sub{font-size:12px; color:var(--mid); margin-top:2px;}
+.link-btn{font-size:12px; color:var(--blue); cursor:pointer; font-weight:500; text-decoration:none;}
+
+/* Chart container */
+.chart-wrap{position:relative; height:240px;}
+
+/* Categories */
+.cat-list{display:flex; flex-direction:column; gap:14px;}
+.cat-row{display:flex; align-items:center; gap:12px;}
+.cat-emoji{
+  width:34px; height:34px; border-radius:9px;
+  background:var(--surface-2); display:grid; place-items:center; font-size:16px;
+}
+.cat-info{flex:1; min-width:0;}
+.cat-name{font-size:13px; font-weight:600; margin-bottom:4px;}
+.cat-bar{height:5px; background:var(--surface-2); border-radius:3px; overflow:hidden;}
+.cat-bar-fill{height:100%; border-radius:3px; transition:width .6s cubic-bezier(.4,0,.2,1);}
+.cat-amt{font-family:'Syne',sans-serif; font-weight:700; font-size:13px; min-width:65px; text-align:right;}
+
+/* ─── TRANSACTIONS TABLE ─── */
+.tx-card{margin-bottom:18px;}
+.tx-toolbar{display:flex; gap:8px; margin-bottom:14px; align-items:center; flex-wrap:wrap;}
+.search-input{
+  flex:1; min-width:200px;
+  padding:8px 12px; border:1px solid var(--line); border-radius:9px;
+  background:var(--surface); color:var(--ink);
+  font:400 13px 'Inter'; outline:0;
+}
+.search-input:focus{border-color:var(--blue);}
+.filter-chip{
+  padding:7px 12px; border:1px solid var(--line); border-radius:9px;
+  background:var(--surface); color:var(--mid); font:500 12px 'Inter';
+  cursor:pointer; display:flex; align-items:center; gap:6px;
+}
+.filter-chip.active{background:var(--ink); color:var(--bg); border-color:var(--ink);}
+.filter-chip:hover{border-color:var(--line-2);}
+
+.tx-table{width:100%; border-collapse:collapse;}
+.tx-table th{
+  text-align:left; font-size:11px; font-weight:600; color:var(--mid);
+  padding:10px 12px; border-bottom:1px solid var(--line);
+  text-transform:uppercase; letter-spacing:.4px;
+}
+.tx-table td{padding:14px 12px; border-bottom:1px solid var(--line); font-size:13px;}
+.tx-table tr:last-child td{border-bottom:0;}
+.tx-table tr.editable:hover{background:var(--surface-2); cursor:pointer;}
+.tx-date{color:var(--mid); font-size:12px; font-variant-numeric:tabular-nums;}
+.tx-person{display:inline-flex; align-items:center; gap:6px;}
+.tx-person-dot{width:6px; height:6px; border-radius:50%;}
+.tx-cat{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 10px; border-radius:20px;
+  background:var(--surface-2); font-size:12px; font-weight:500;
+}
+.tx-amt{font-family:'Syne',sans-serif; font-weight:700; text-align:right; font-variant-numeric:tabular-nums;}
+.tx-amt.expense{color:var(--red);}
+.tx-amt.income{color:var(--green);}
+.tx-actions{text-align:right; opacity:0; transition:opacity .15s;}
+.tx-table tr:hover .tx-actions{opacity:1;}
+.action-btn{
+  width:28px; height:28px; border:0; background:transparent;
+  border-radius:6px; color:var(--mid); cursor:pointer;
+}
+.action-btn:hover{background:var(--surface-2); color:var(--ink);}
+
+/* ─── GOALS ─── */
+.goals-card{margin-bottom:18px;}
+.goals-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+.goal{
+  padding:18px; border:1px solid var(--line); border-radius:12px;
+  background:var(--surface-2);
+}
+.goal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
+.goal-emoji{font-size:22px;}
+.goal-pct{font-family:'Syne',sans-serif; font-size:13px; font-weight:700; color:var(--blue);}
+.goal-name{font-size:13px; font-weight:600; margin-bottom:4px;}
+.goal-amount{font-family:'Syne',sans-serif; font-size:18px; font-weight:700; margin-bottom:4px;}
+.goal-target{font-size:11px; color:var(--mid); margin-bottom:10px;}
+.goal-bar{height:6px; background:var(--surface); border-radius:3px; overflow:hidden;}
+.goal-bar-fill{height:100%; border-radius:3px;}
+
+.goal.add{
+  border:2px dashed var(--line-2); background:transparent;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; cursor:pointer; color:var(--mid); transition:all .15s;
+}
+.goal.add:hover{border-color:var(--blue); color:var(--blue); background:var(--blue-bg);}
+.goal.add svg{font-size:24px;}
+
+/* ─── FAB ─── */
+.fab{
+  position:fixed; bottom:28px; right:28px; z-index:40;
+  width:56px; height:56px; border-radius:50%;
+  background:var(--ink); color:var(--bg); border:0;
+  display:grid; place-items:center; cursor:pointer;
+  box-shadow:var(--shadow-lg); transition:transform .2s;
+}
+.fab:hover{transform:scale(1.05);}
+
+/* ─── REALTIME PULSE ─── */
+.live-dot{
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:11px; color:var(--green); font-weight:500;
+}
+.live-dot::before{
+  content:''; width:6px; height:6px; border-radius:50%;
+  background:var(--green); animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:900px){
+  .nav{display:none;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .grid-2{grid-template-columns:1fr;}
+  .goals-grid{grid-template-columns:1fr;}
+  .page{padding:20px 16px 100px;}
+  .greeting{font-size:22px;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-dot">L</div>
+      LAUFAB
+    </div>
+    <nav class="nav">
+      <a class="active">Resumen</a>
+      <a>Movimientos</a>
+      <a>Categorías</a>
+      <a>Metas</a>
+      <a>Reportes</a>
+    </nav>
+    <div class="topbar-right">
+      <div class="live-dot">En vivo</div>
+      <button class="icon-btn" onclick="toggleTheme()" title="Cambiar tema">
+        <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button class="icon-btn" title="Notificaciones">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </button>
+      <div class="avatar">F</div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1 class="greeting">Buen día Fabio <span>👋</span></h1>
+    <p class="subgreeting">Esto es lo que pasa con la plata de ustedes — actualizado al instante.</p>
+
+    <div class="quick-add">
+      <div class="quick-add-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+      </div>
+      <input type="text" placeholder="Decime un gasto o ingreso… ej: '40 mil en el super con la verdulería'">
+      <span class="quick-add-hint">⌘ Enter</span>
+      <button class="btn-primary">Registrar</button>
+    </div>
+    <div class="quick-suggestions">
+      <span class="suggestion">+ café 1500</span>
+      <span class="suggestion">+ alquiler 505000</span>
+      <span class="suggestion">+ honorarios 800k</span>
+      <span class="suggestion">+ combustible 15000</span>
+    </div>
+  </section>
+
+  <!-- PERSON TABS + PERIOD -->
+  <div class="person-row">
+    <button class="person-tab active">
+      <span class="person-dot" style="background:var(--ink);"></span>
+      Todos
+    </button>
+    <button class="person-tab">
+      <span class="person-dot" style="background:var(--blue);"></span>
+      Fabio
+    </button>
+    <button class="person-tab">
+      <span class="person-dot" style="background:#FF6584;"></span>
+      Laura
+    </button>
+    <div class="period-select">
+      <button>Hoy</button>
+      <button>Semana</button>
+      <button class="active">Mes</button>
+      <button>Año</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-head">
+        <span class="kpi-label">Ingresos</span>
+        <div class="kpi-icon green">↑</div>
+      </div>
+      <div class="kpi-value green">$1.2M</div>
+      <div class="kpi-trend up">↑ 12% vs mes anterior</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-head">
+        <span class="kpi-label">Egresos</span>
+        <div class="kpi-icon red">↓</div>
+      </div>
+      <div class="kpi-value red">$1.16M</div>
+      <div class="kpi-trend down">↑ 8% vs mes anterior</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-head">
+        <span class="kpi-label">Balance</span>
+        <div class="kpi-icon blue">=</div>
+      </div>
+      <div class="kpi-value">$40K</div>
+      <div class="kpi-trend">Positivo · ahorrable</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-head">
+        <span class="kpi-label">Tasa de ahorro</span>
+        <div class="kpi-icon amber">⚡</div>
+      </div>
+      <div class="kpi-value">3.3%</div>
+      <div class="kpi-trend">Meta familiar: 20%</div>
+    </div>
+  </div>
+
+  <!-- CHART + CATEGORIES -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Evolución del mes</div>
+          <div class="card-sub">Ingresos vs egresos · día por día</div>
+        </div>
+        <a class="link-btn">Ver año →</a>
+      </div>
+      <div class="chart-wrap"><canvas id="evolutionChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Top categorías</div>
+          <div class="card-sub">En qué se va la plata</div>
+        </div>
+        <a class="link-btn">Ver todas →</a>
+      </div>
+      <div class="cat-list">
+        <div class="cat-row">
+          <div class="cat-emoji">🏠</div>
+          <div class="cat-info">
+            <div class="cat-name">Vivienda y Servicios</div>
+            <div class="cat-bar"><div class="cat-bar-fill" style="width:100%; background:var(--blue);"></div></div>
+          </div>
+          <div class="cat-amt">$520K</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-emoji">💼</div>
+          <div class="cat-info">
+            <div class="cat-name">Gastos Operativos</div>
+            <div class="cat-bar"><div class="cat-bar-fill" style="width:75%; background:#A78BFA;"></div></div>
+          </div>
+          <div class="cat-amt">$391K</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-emoji">🛒</div>
+          <div class="cat-info">
+            <div class="cat-name">Alimentación</div>
+            <div class="cat-bar"><div class="cat-bar-fill" style="width:38%; background:var(--green);"></div></div>
+          </div>
+          <div class="cat-amt">$197K</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-emoji">⛽</div>
+          <div class="cat-info">
+            <div class="cat-name">Transporte</div>
+            <div class="cat-bar"><div class="cat-bar-fill" style="width:7%; background:var(--amber);"></div></div>
+          </div>
+          <div class="cat-amt">$35K</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-emoji">☕</div>
+          <div class="cat-info">
+            <div class="cat-name">Salidas</div>
+            <div class="cat-bar"><div class="cat-bar-fill" style="width:3%; background:var(--red);"></div></div>
+          </div>
+          <div class="cat-amt">$15K</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="card tx-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Movimientos recientes</div>
+        <div class="card-sub">Click para editar · doble click para borrar</div>
+      </div>
+      <a class="link-btn">Ver todos (147) →</a>
+    </div>
+
+    <div class="tx-toolbar">
+      <input type="text" class="search-input" placeholder="Buscar concepto, categoría, persona…">
+      <button class="filter-chip active">Todos</button>
+      <button class="filter-chip">Egresos</button>
+      <button class="filter-chip">Ingresos</button>
+      <button class="filter-chip">📅 Este mes</button>
+      <button class="filter-chip">🏷️ Categoría</button>
+    </div>
+
+    <table class="tx-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Persona</th>
+          <th>Concepto</th>
+          <th>Categoría</th>
+          <th style="text-align:right;">Importe</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="editable">
+          <td class="tx-date">15 Ene · 18:00</td>
+          <td><span class="tx-person"><span class="tx-person-dot" style="background:var(--blue);"></span>Fabio</span></td>
+          <td>Compra súper</td>
+          <td><span class="tx-cat">🛒 Alimentación</span></td>
+          <td class="tx-amt expense">-$8.800</td>
+          <td class="tx-actions">
+            <button class="action-btn" title="Editar">✎</button>
+            <button class="action-btn" title="Borrar">🗑</button>
+          </td>
+        </tr>
+        <tr class="editable">
+          <td class="tx-date">15 Ene · 17:30</td>
+          <td><span class="tx-person"><span class="tx-person-dot" style="background:var(--blue);"></span>Fabio</span></td>
+          <td>Almacén</td>
+          <td><span class="tx-cat">🛒 Alimentación</span></td>
+          <td class="tx-amt expense">-$10.000</td>
+          <td class="tx-actions">
+            <button class="action-btn">✎</button>
+            <button class="action-btn">🗑</button>
+          </td>
+        </tr>
+        <tr class="editable">
+          <td class="tx-date">15 Ene · 16:00</td>
+          <td><span class="tx-person"><span class="tx-person-dot" style="background:var(--blue);"></span>Fabio</span></td>
+          <td>Combustible</td>
+          <td><span class="tx-cat">⛽ Transporte</span></td>
+          <td class="tx-amt expense">-$20.000</td>
+          <td class="tx-actions">
+            <button class="action-btn">✎</button>
+            <button class="action-btn">🗑</button>
+          </td>
+        </tr>
+        <tr class="editable">
+          <td class="tx-date">15 Ene · 13:30</td>
+          <td><span class="tx-person"><span class="tx-person-dot" style="background:var(--blue);"></span>Fabio</span></td>
+          <td>Carnicería</td>
+          <td><span class="tx-cat">🛒 Alimentación</span></td>
+          <td class="tx-amt expense">-$40.000</td>
+          <td class="tx-actions">
+            <button class="action-btn">✎</button>
+            <button class="action-btn">🗑</button>
+          </td>
+        </tr>
+        <tr class="editable">
+          <td class="tx-date">15 Ene · 10:30</td>
+          <td><span class="tx-person"><span class="tx-person-dot" style="background:var(--blue);"></span>Fabio</span></td>
+          <td>Servicios IA</td>
+          <td><span class="tx-cat">💼 Gastos Operativos</span></td>
+          <td class="tx-amt expense">-$180.000</td>
+          <td class="tx-actions">
+            <button class="action-btn">✎</button>
+            <button class="action-btn">🗑</button>
+          </td>
+        </tr>
+        <tr class="editable">
+          <td class="tx-date">15 Ene · 09:00</td>
+          <td><span class="tx-person"><span class="tx-person-dot" style="background:var(--blue);"></span>Fabio</span></td>
+          <td>Monotributo</td>
+          <td><span class="tx-cat">💼 Gastos Operativos</span></td>
+          <td class="tx-amt expense">-$62.000</td>
+          <td class="tx-actions">
+            <button class="action-btn">✎</button>
+            <button class="action-btn">🗑</button>
+          </td>
+        </tr>
+        <tr class="editable">
+          <td class="tx-date">15 Ene · 08:00</td>
+          <td><span class="tx-person"><span class="tx-person-dot" style="background:var(--blue);"></span>Fabio</span></td>
+          <td>Alquiler</td>
+          <td><span class="tx-cat">🏠 Vivienda</span></td>
+          <td class="tx-amt expense">-$505.000</td>
+          <td class="tx-actions">
+            <button class="action-btn">✎</button>
+            <button class="action-btn">🗑</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- GOALS -->
+  <div class="card goals-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Metas familiares</div>
+        <div class="card-sub">Hacia donde están ahorrando</div>
+      </div>
+      <a class="link-btn">Gestionar →</a>
+    </div>
+    <div class="goals-grid">
+      <div class="goal">
+        <div class="goal-head">
+          <div class="goal-emoji">🏖️</div>
+          <div class="goal-pct">68%</div>
+        </div>
+        <div class="goal-name">Vacaciones 2026</div>
+        <div class="goal-amount">$680.000</div>
+        <div class="goal-target">de $1.000.000 · marzo 2026</div>
+        <div class="goal-bar"><div class="goal-bar-fill" style="width:68%; background:linear-gradient(90deg,var(--blue),var(--green));"></div></div>
+      </div>
+      <div class="goal">
+        <div class="goal-head">
+          <div class="goal-emoji">🚗</div>
+          <div class="goal-pct">23%</div>
+        </div>
+        <div class="goal-name">Auto nuevo</div>
+        <div class="goal-amount">$2.300.000</div>
+        <div class="goal-target">de $10.000.000 · 2027</div>
+        <div class="goal-bar"><div class="goal-bar-fill" style="width:23%; background:linear-gradient(90deg,var(--amber),var(--red));"></div></div>
+      </div>
+      <div class="goal add">
+        <span style="font-size:24px;">+</span>
+        <div style="font-size:13px; font-weight:600;">Nueva meta</div>
+        <div style="font-size:11px;">Fondo emergencia, casa, lo que quieras</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FAB -->
+<button class="fab" title="Agregar gasto rápido">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<script>
+function toggleTheme(){
+  const root = document.documentElement;
+  const cur = root.getAttribute('data-theme');
+  root.setAttribute('data-theme', cur === 'light' ? 'dark' : 'light');
+}
+
+// Chart
+const ctx = document.getElementById('evolutionChart').getContext('2d');
+new Chart(ctx, {
+  type:'line',
+  data:{
+    labels:['1','3','5','7','9','11','13','15','17','19','21','23','25','27','29'],
+    datasets:[
+      {
+        label:'Ingresos',
+        data:[0,0,0,0,250000,250000,250000,250000,1200000,1200000,1200000,1200000,1200000,1200000,1200000],
+        borderColor:'#00B383', backgroundColor:'rgba(0,179,131,.08)',
+        fill:true, tension:.4, borderWidth:2, pointRadius:0, pointHoverRadius:5
+      },
+      {
+        label:'Egresos',
+        data:[0,15000,30000,80000,180000,260000,340000,1158800,1158800,1158800,1158800,1158800,1158800,1158800,1158800],
+        borderColor:'#E8425A', backgroundColor:'rgba(232,66,90,.08)',
+        fill:true, tension:.4, borderWidth:2, pointRadius:0, pointHoverRadius:5
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index', intersect:false},
+    plugins:{
+      legend:{position:'top', align:'end', labels:{font:{family:'Inter',size:11,weight:'500'}, usePointStyle:true, pointStyleWidth:8, padding:14, color:getComputedStyle(document.documentElement).getPropertyValue('--mid')}},
+      tooltip:{
+        backgroundColor:'#0A0A0A', titleColor:'#fff', bodyColor:'rgba(255,255,255,.7)',
+        padding:12, cornerRadius:8, displayColors:true, boxPadding:4,
+        callbacks:{label:c=>' '+new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:0}).format(c.raw)}
+      }
+    },
+    scales:{
+      x:{grid:{display:false}, ticks:{font:{family:'Inter',size:10}, color:'#A0A0A0'}, border:{display:false}},
+      y:{grid:{color:'rgba(0,0,0,.04)'}, ticks:{font:{family:'Inter',size:10}, color:'#A0A0A0', callback:v=>'$'+(v/1000)+'K'}, border:{display:false}}
+    }
+  }
+});
+
+// Click rows simulation
+document.querySelectorAll('.tx-table tr.editable').forEach(r => {
+  r.addEventListener('click', e => {
+    if(!e.target.closest('.action-btn')) console.log('Editar:', r.querySelector('td:nth-child(3)').textContent);
+  });
+});
+
+// Quick add focus on /
+document.addEventListener('keydown', e => {
+  if(e.key === '/' && !e.target.matches('input')) { e.preventDefault(); document.querySelector('.quick-add input').focus(); }
+});
+</script>
+
+</body>
+</html>

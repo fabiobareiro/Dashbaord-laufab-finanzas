@@ -1,0 +1,334 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-bot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -336,
+        240
+      ],
+      "id": "bd3a3232-b204-442f-bf05-5099a4eab20a",
+      "name": "Webhook",
+      "webhookId": "7c04c8fa-c52c-4c98-b886-1e3a9d72d147"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# ROL: ANALISTA FINANCIERO ESTRATÉGICO (MOTOR DE CLASIFICACIÓN Y CONTEXTO)\n\n## MISIÓN\nTu misión es procesar registros de ingresos y egresos familiares. Debes usar tu razonamiento para distinguir no solo QUÉ se compró, sino el PROPÓSITO del gasto. Tu prioridad es la precisión en la subcategorización para permitir un análisis de ahorro real.\n\n## LAS 5 COLUMNAS VERTEBRALES\n1. **Vivienda y Servicios:** Gastos fijos y mantenimiento del hogar.\n2. **Alimentación:** Todo lo consumible (Diferenciando consumo en hogar vs. fuera).\n3. **Transporte y Movilidad:** Traslados, vehículos y logística.\n4. **Estilo de Vida y Personales:** Salud, ropa, regalos, hobbies y placeres evitables.\n5. **Finanzas y Futuro:** Ingresos (sueldos, ventas), ahorros, inversiones y deudas.\n6. **Gastos Operativos:** Todo lo relacionado a gastos de trabajo y negocios (impuestos, monotributo, pagos de empleados, compra de materiales, etc.).\n\n## CRITERIO DE CLASIFICACIÓN (EL \"OJO\" DEL ANALISTA)\nDebes aplicar una lógica diferenciadora estricta:\n- **Alimentación (Hogar):** Compras en supermercados, carnicerías, ferias. Es una necesidad básica.\n- **Alimentación (Salidas/Placer):** Cafeterías, restaurantes, delivery, snacks al paso. Es un gasto de estilo de vida/ocio que se puede optimizar.\n- **Ingresos:** Identifica claramente el origen (Sueldo, Regalo, Venta, Reembolso).\n- **Notas:** Captura siempre el \"por qué\" o el contexto emocional/situacional si el usuario lo provee (ej. \"haciendo tiempo\", \"antojo\", \"emergencia\").\n\n## PROTOCOLO DE RAZONAMIENTO\n1. **Identificar Tipo:** ¿Es dinero que entra (Ingreso) o sale (Egreso)?\n2. **Análisis de Intención:** ¿Es un gasto para el funcionamiento del hogar o es un gasto de consumo externo/placer?\n3. **Normalización:** \n   - **Importe:** Extrae el número y devuélvelo SIEMPRE como STRING (ej. \"1500\").\n   - **Concepto:** Crea un título breve y profesional (ej. \"Café en cafetería\", \"Compra mensual súper\").\n4. **Creación de Subcategoría:** Usa tu lógica para crear una subcategoría descriptiva que permita filtrar (ej. \"Suscripciones Digitales\", \"Salidas Gastronómicas\", \"Mantenimiento Vehículo\").\n\n## FORMATO DE SALIDA (ESTRICTO)\n**Responde ÚNICAMENTE con el objeto JSON.** \nPROHIBIDO usar bloques de código Markdown (```json ... ```). \nPROHIBIDO agregar texto antes o después del JSON.\n**Si solo hay un registro, NO uses corchetes de array [ ]**, devuelve solo el objeto { }.\n\n{\n  \"tipo\": \"Ingreso o Egreso\",\n  \"categoria\": \"Una de las 5 principales\",\n  \"subcategoria\": \"Nombre descriptivo\",\n  \"concepto\": \"Descripción normalizada\",\n  \"importe\": \"string con el número\",\n  \"medio_pago\": \"string o null\",\n  \"notas\": \"Contexto o null\"\n}\n\n## EJEMPLOS DE CRITERIO:\n- Input: \"1500 para un cafecito en el centro porque hacia frio\"\n  - Output: {\"tipo\": \"Egreso\", \"categoria\": \"Alimentación\", \"subcategoria\": \"Salidas/Cafetería\", \"concepto\": \"Café al paso\", \"importe\": \"1500\", \"medio_pago\": null, \"notas\": \"Hacía frío en el centro\"}\n\n- Input: \"Gaste 40000 en el coto, compre café y carne\"\n  - Output: {\"tipo\": \"Egreso\", \"categoria\": \"Alimentación\", \"subcategoria\": \"Supermercado/Hogar\", \"concepto\": \"Compra de víveres\", \"importe\": \"40000\", \"medio_pago\": null, \"notas\": \"Incluye café y carne para la casa\"}\n\n- Input: \"Me pagaron 500k del sueldo\"\n  - Output: {\"tipo\": \"Ingreso\", \"categoria\": \"Finanzas y futuro\", \"subcategoria\": \"Sueldo\", \"concepto\": \"Cobro de haberes\", \"importe\": \"500000\", \"medio_pago\": \"Transferencia\", \"notas\": null}\n\n## ENTRADA DEL USUARIO:\n{{ $json.body.message.text }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        -64,
+        240
+      ],
+      "id": "fb3b726a-3a8a-4e26-8fa0-1a65e4e64176",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Identificamos a la persona desde el Webhook\nconst webhook = $('Webhook').first().json;\nconst usernameTelegram = webhook.body.message.from.username;\nlet persona = (usernameTelegram === \"fabotrader\") ? \"Fabio\" : \"Laura\";\n\n// 2. Agarramos el texto del Agente de IA\nlet aiRawText = $input.first().json.text;\n\n// --- LIMPIEZA \"BULLETPROOF\" ---\n// A. Eliminamos bloques de código Markdown si existen (```json o ```)\naiRawText = aiRawText.replace(/```json|```/g, \"\").trim();\n\nlet aiData;\ntry {\n  // B. Parseamos el JSON\n  const parsed = JSON.parse(aiRawText);\n  \n  // C. Si la IA mandó un Array [ ], tomamos el primer elemento. Si no, usamos el objeto.\n  aiData = Array.isArray(parsed) ? parsed[0] : parsed;\n} catch (e) {\n  // Si falla el parseo, devolvemos valores vacíos para no romper el flujo\n  aiData = {};\n}\n\n// 3. Generamos la Fecha + Hora completa\nconst ahora = new Date();\nconst fechaConHora = ahora.toLocaleString('es-AR', {\n  day: '2-digit', month: '2-digit', year: 'numeric',\n  hour: '2-digit', minute: '2-digit', second: '2-digit',\n  hour12: false\n});\n\n// 4. RETORNAMOS LA FILA PARA EL SHEET (Asegurando que nada sea undefined)\nreturn {\n  Fecha: fechaConHora,\n  Persona: persona,\n  Tipo: aiData.tipo || \"Egreso\", // Valor por defecto si falla\n  Categoria: aiData.categoria || \"Otros\",\n  Subcategoria: aiData.subcategoria || \"\",\n  Concepto: aiData.concepto || \"Gasto registrado\",\n  Importe: aiData.importe || \"0\",\n  Medio_pago: aiData.medio_pago || \"\",\n  Notas: aiData.notas || \"\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        240
+      ],
+      "id": "a4be8437-7ad5-4e48-9f61-72c903b97645",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs",
+          "mode": "list",
+          "cachedResultName": "Finanzas LAUFAB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Registro",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID-TIME": "={{ $json.Fecha }}",
+            "Importe": "={{ $json.Importe }}",
+            "Medio ": "={{ $json.Medio_pago }}",
+            "Notas": "={{ $json.Notas }}",
+            "Tipo": "={{ $json.Tipo }}",
+            "Persona": "={{ $json.Persona }}",
+            "Categoría": "={{ $json.Categoria }}",
+            "Concepto": "={{ $json.Concepto }}",
+            "Subcat": "={{ $json.Subcategoria }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ID-TIME",
+              "displayName": "ID-TIME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tipo",
+              "displayName": "Tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Persona",
+              "displayName": "Persona",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Categoría",
+              "displayName": "Categoría",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Concepto",
+              "displayName": "Concepto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subcat",
+              "displayName": "Subcat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Importe",
+              "displayName": "Importe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Medio ",
+              "displayName": "Medio ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notas",
+              "displayName": "Notas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        576,
+        240
+      ],
+      "id": "bf67392a-2b84-4f2b-b398-549c90f8e32d",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "543i8YYfs9Ly2Fhe",
+          "name": "Sheet FabioRBTech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        432
+      ],
+      "id": "7c737aed-e420-480d-a956-4f7bd63e6624",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "HK7kg8Uh9fS3aMXH",
+          "name": "OpenRouter Triny 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Webhook').item.json.body.message.from.id }}",
+        "text": "=Listo {{ $('Code in JavaScript').item.json.Persona }}!\nYa registre tu {{ $('Code in JavaScript').item.json.Tipo }} de ${{ $('Code in JavaScript').item.json.Importe }} en {{ $('Code in JavaScript').item.json.Concepto }} ({{ $('Code in JavaScript').item.json.Categoria }} - {{ $('Code in JavaScript').item.json.Subcategoria }})\nSi necesitas modificar algo hacelo desde acá: https://docs.google.com/spreadsheets/d/1t4pcz9CHIU2PYamKfXqgjgMBWctKraKZCRSy7d403Fs/edit?usp=sharing",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        832,
+        240
+      ],
+      "id": "42167735-74af-4b0c-aab9-f2187ebe1d03",
+      "name": "Send a text message",
+      "webhookId": "9a705080-cf4a-4aff-8336-9b9ace7eec71",
+      "credentials": {
+        "telegramApi": {
+          "id": "AgEw9sGUSrnMtJru",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Webhook": [
+      {
+        "headers": {
+          "host": "devn8nwebhook.fractionalclassia.online",
+          "content-length": "352",
+          "accept-encoding": "gzip, deflate",
+          "content-type": "application/json",
+          "x-forwarded-for": "91.108.5.88",
+          "x-forwarded-host": "devn8nwebhook.fractionalclassia.online",
+          "x-forwarded-port": "443",
+          "x-forwarded-proto": "https",
+          "x-forwarded-server": "89ebb82df9ce",
+          "x-real-ip": "91.108.5.88"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "update_id": 145484541,
+          "message": {
+            "message_id": 497,
+            "from": {
+              "id": 861640585,
+              "is_bot": false,
+              "first_name": "FRBTECH",
+              "username": "fabotrader",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 861640585,
+              "first_name": "FRBTECH",
+              "username": "fabotrader",
+              "type": "private"
+            },
+            "date": 1777320344,
+            "text": "compra suscripcion mensual de mentoria desarrollo personal David Tesch 49mil"
+          }
+        },
+        "webhookUrl": "https://devn8nwebhook.fractionalclassia.online/webhook/telegram-bot",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6ef92507f7a8c3da451280e82baad0772ecc51dccaf10d19b03c69dec2ebf34a"
+  }
+}
