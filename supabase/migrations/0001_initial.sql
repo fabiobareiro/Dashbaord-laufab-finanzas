@@ -56,9 +56,10 @@ create table categories (
   is_business boolean default false,
   archived boolean default false,
   pending_review boolean default false,
-  created_at timestamptz default now(),
-  unique(household_id, parent_id, slug)
+  created_at timestamptz default now()
 );
+create unique index idx_categories_household_parent_slug
+  on categories (household_id, coalesce(parent_id::text, ''), slug);
 create index idx_categories_household on categories(household_id) where archived = false;
 create index idx_categories_pending on categories(household_id) where pending_review = true;
 

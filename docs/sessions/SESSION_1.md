@@ -34,7 +34,7 @@ PASOS:
      goal_contributions, accounts, categories
    - 0004_triggers.sql con set_updated_at() y triggers de audit_log
 
-2. Crear supabase/seeds/0001_initial_data.sql:
+2. Crear supabase/seed.sql:
    - 1 household: name='Saldito Demo', base_currency='ARS'
    - 2 profiles:
      * Fabio: telegram_username='fabotrader', display_name='Fabio',
