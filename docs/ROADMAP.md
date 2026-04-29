@@ -4,6 +4,8 @@
 
 MVP usable en 24h. Cada fase agrega valor real. La arquitectura del día 1 es la del día 1000 (multi-tenant, soft-delete, audit, prompt versionado).
 
+Migración sin fricción es retención. Saldito asume que todo usuario llega con historia (Sheet, Excel, banco, app vieja). Importar esa historia es feature core.
+
 ---
 
 ## Fase 0 — Setup (1h)
@@ -31,6 +33,8 @@ MVP usable en 24h. Cada fase agrega valor real. La arquitectura del día 1 es la
 - Proyecto Supabase nuevo (no el del MCP).
 - Migrations aplicadas: schema, RLS, Realtime, triggers.
 - Seed: 1 household, 2 profiles (Fabio, Laura), categorías default, prompt v1.
+- Módulo `lib/import/` con pipeline genérico y parser spreadsheet (`CSV + XLSX`) basado en `ColumnMapping`.
+- Preset LAUFAB en el script de importación para mapear la hoja histórica actual sin acoplar el módulo genérico.
 - Script `scripts/import-from-sheet.ts` corrido: datos migrados, drift normalizado.
 - Tipos TypeScript generados.
 
@@ -188,12 +192,12 @@ A partir de acá ya podés invitar beta testers. Las siguientes fases son agrega
 - Export Excel con tabla dinámica pre-armada.
 - Email automático fin de mes.
 
-## Fase 13 — Importadores (semana 6)
+## Fase 13 — Adaptadores adicionales + UI `/importar` (semana 6)
 
-- Subir extracto bancario PDF → Claude Vision parsea → importa.
-- Subir CSV de Mercado Pago.
-- Subir resumen de tarjeta de crédito.
-- Mapping inteligente con preview.
+- Adaptadores adicionales: extractos de bancos AR, billeteras y exports de YNAB/Maybe/Notion.
+- PDFs vía Claude Vision cuando existan muestras reales del origen.
+- UI `/importar` con drag-drop.
+- Autodetección de origen y preview de mapeo.
 
 ## Fase 14 — Mobile native opcional (mes 2-3)
 

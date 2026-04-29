@@ -76,6 +76,24 @@ Reemplaza un Google Sheet + n8n que usamos hoy.
 
 **Tipografía**: Manrope para UI. Mono para números (JetBrains o IBM Plex) se define Sesión 3.
 
+**Importador**: feature core del producto, no script descartable. La misma lógica base se reutiliza entre el script de migración de Sesión 1, el bot de Telegram en Sesión 2 (reutiliza classifier), el quick-add web de Fase 4 y el endpoint `/importar` de Fase 13.
+
+**Pipeline de import**: `parser -> NormalizedTransaction -> classifier LLM -> upsert idempotente`. El pipeline es genérico y los orígenes nuevos entran vía una interface `Adapter` sin tocar la lógica central.
+
+**Clasificación de imports**: Opción B confirmada. Todas las filas pasan row-by-row por Claude Haiku 4.5 vía OpenRouter. Cero `CATEGORY_MAP`. Si la confianza es baja, se inserta con la mejor categoría disponible y `needs_review=true`. Si el LLM devuelve `category_id=null` y `suggest_new_category`, se guarda la sugerencia y `category_id` queda `null`.
+
+**Spreadsheet parser**: en Sesión 1 se implementa solo parser spreadsheet (`CSV + XLSX`). Cubre el Sheet de LAUFAB y también futuras planillas de usuarios mediante `ColumnMapping { date, amount, type, person, category, subcategory, concept, payment_method, notes }`. No se crean stubs de Mercado Pago, YNAB, bancos ni billeteras: eso se diseña en Fase 13 con archivos reales en mano.
+
+**Preset LAUFAB**: el mapping específico de la hoja histórica vive como constante en el script de importación, no dentro del módulo genérico.
+
+**external_id de spreadsheet**: hash determinístico de `(YYYY-MM-DD + amount + concepto + row_index)`. Para futuros parsers la interface exige `external_id: string`, pero cada adaptador define su estrategia cuando existan muestras reales del origen.
+
+**Ubicación del módulo**: vive en `lib/import/` raíz por ahora. Cuando Sesión 3 inicialice Next.js, se mueve a `src/lib/import/` con `git mv` y ajuste de imports.
+
+**Gestor de paquetes**: `npm`. Si en Sesión 3 el starter `KolbySisk` exige `pnpm`, recién ahí se instala.
+
+**Anti-patrón nuevo**: el copiloto no asume estructura del repo ni formato de orígenes externos. Antes de proponer diseño o parser, primero audita el repo o pide muestras reales.
+
 ---
 
 ## 6. Estado actual

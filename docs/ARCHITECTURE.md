@@ -55,8 +55,9 @@ Telegram → n8n webhook
   → Lookup últimos 5 mensajes de agent_memory
   → Lookup prompt activo de ai_config
   → Inyectar todo al LLM (OpenRouter)
-  → Parsear JSON
-  → Si suggest_new_category: crear con pending_review=true
+  → Parsear JSON del classifier compartido
+  → Si la confianza es baja: insertar igual con mejor categoría y needs_review=true
+  → Si category_id=null + suggest_new_category: guardar sugerencia, no crear categoría en caliente
   → Insert en transactions con external_id (idempotencia)
   → Insert en agent_memory
   → Reply Telegram con confirmación + link
@@ -86,6 +87,35 @@ Telegram (foto) → n8n webhook
   → Mismo pipeline de clasificación contra categorías
   → Insert en transactions con source='photo'
 ```
+
+## Módulo de import
+
+El importador es feature core del producto. La misma base se reutiliza en cuatro superficies: migración histórica de Sesión 1, bot Telegram de Sesión 2 (reutiliza classifier), quick-add web de Fase 4 y endpoint `/importar` de Fase 13.
+
+Pipeline único:
+
+```
+Adapter origen-específico
+  → parser
+  → NormalizedTransaction
+  → classifier LLM row-by-row
+  → upsert idempotente en transactions
+```
+
+Decisiones estructurales:
+- El pipeline no conoce formatos externos. Solo consume una interface `Adapter` que entrega transacciones normalizadas y un `external_id` ya resuelto.
+- La clasificación usa Claude Haiku 4.5 vía OpenRouter en todas las filas. No hay `CATEGORY_MAP`.
+- Baja confianza no bloquea importación: se inserta con la mejor categoría encontrada y `needs_review=true`.
+- Si el LLM no encuentra categoría existente, devuelve `category_id=null` y `suggest_new_category`; la sugerencia se guarda para revisión posterior.
+- `type` usa exactamente los valores del schema y del prompt: `ingreso | egreso | ahorro | transferencia`.
+- `currency` vive en `NormalizedTransaction` y por ahora se acota a `ARS | USD`; el parser spreadsheet la infiere o default `ARS`.
+- El classifier también devuelve `is_business`, `concept` reescrito, `payment_method` y `type_confirmed` para corregir lo que haya inferido el parser.
+
+Por qué el parser spreadsheet cubre múltiples orígenes con un solo archivo:
+- Google Sheet, Excel y CSV terminan en la misma abstracción tabular: filas + columnas.
+- `ColumnMapping` permite decir qué columna corresponde a `date`, `amount`, `type`, `person`, `category`, `subcategory`, `concept`, `payment_method` y `notes` sin reescribir el parser.
+- El preset de LAUFAB vive en el script de importación, no en el módulo. El módulo queda genérico para cualquier usuario futuro que suba su propia planilla.
+- No se crean stubs de Mercado Pago, bancos, YNAB o billeteras en abstracto. Los adaptadores nuevos se diseñan en Fase 13 cuando haya archivos reales para auditar.
 
 ## Estructura de archivos del frontend
 
@@ -128,7 +158,7 @@ src/
 1. **Soft delete siempre**. Nunca DELETE físico. Filtros por `deleted_at IS NULL`.
 2. **`updated_at` automático** vía trigger.
 3. **Audit log automático** en `transactions`, `goals`, `categories`.
-4. **`external_id` UNIQUE** previene duplicados. Formato: `telegram_{update_id}` o `web_{nanoid}`.
+4. **`external_id` UNIQUE** previene duplicados. Cada adapter define su formato; en spreadsheet es hash determinístico de `YYYY-MM-DD + amount + concept + row_index`.
 5. **numeric(14,2)** para todos los importes. Nunca float.
 6. **timestamptz** siempre. UTC en DB, local en frontend.
 7. **Tipos generados**: `npx supabase gen types typescript --linked > src/lib/supabase/types.ts` después de cada migration.
