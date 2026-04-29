@@ -55,7 +55,7 @@ select '00000000-0000-0000-0000-000000000001', id, x.name, x.slug, 'egreso', x.i
     ('Almacén', 'alimentacion-almacen', '🥖'),
     ('Carnicería', 'alimentacion-carniceria', '🥩'),
     ('Verdulería', 'alimentacion-verduleria', '🥬'),
-    ('Salidas/Cafetería', 'alimentacion-salidas-cafeteria', '☕'),
+    ('Salidas/Cafetería', 'alimentacion-cafeteria', '☕'),
     ('Salidas/Restaurant', 'alimentacion-salidas-restaurant', '🍽️'),
     ('Delivery', 'alimentacion-delivery', '🛵')
   ) as x(name, slug, icon);
@@ -104,7 +104,7 @@ insert into categories (household_id, parent_id, name, slug, type, icon)
 select '00000000-0000-0000-0000-000000000001', id, x.name, x.slug, x.type, x.icon from parent,
   (values
     ('Sueldo', 'finanzas-y-futuro-sueldo', 'ingreso', '💵'),
-    ('Honorarios', 'finanzas-y-futuro-honorarios', 'ingreso', '💼'),
+    ('Honorarios', 'ingresos-honorarios', 'ingreso', '💼'),
     ('Reembolso', 'finanzas-y-futuro-reembolso', 'ingreso', '↩️'),
     ('Venta', 'finanzas-y-futuro-venta', 'ingreso', '🏷️'),
     ('Ahorro', 'finanzas-y-futuro-ahorro', 'ahorro', '🐷'),
@@ -120,7 +120,7 @@ with parent as (
 insert into categories (household_id, parent_id, name, slug, type, icon, is_business)
 select '00000000-0000-0000-0000-000000000001', id, x.name, x.slug, 'egreso', x.icon, true from parent,
   (values
-    ('Monotributo', 'gastos-operativos-monotributo', '🧾'),
+    ('Monotributo', 'operativo-monotributo', '🧾'),
     ('Servicios IA', 'gastos-operativos-servicios-ia', '🤖'),
     ('Suscripciones Digitales', 'gastos-operativos-suscripciones-digitales', '🔌'),
     ('Anuncios', 'gastos-operativos-anuncios', '📢'),
@@ -178,7 +178,7 @@ OUTPUT SCHEMA:
 EJEMPLOS:
 
 Input: "café 1500 en el centro porque hacía frío"
-Output: {"type":"egreso","amount":1500,"currency":"ARS","category_slug":"alimentacion-salidas-cafeteria","suggest_new_category":null,"concept":"Café al paso","payment_method":null,"is_business":false,"notes":"Hacía frío en el centro","ai_confidence":0.95,"ai_reasoning":"Monto y contexto claros","needs_review":false}
+Output: {"type":"egreso","amount":1500,"currency":"ARS","category_slug":"alimentacion-cafeteria","suggest_new_category":null,"concept":"Café al paso","payment_method":null,"is_business":false,"notes":"Hacía frío en el centro","ai_confidence":0.95,"ai_reasoning":"Monto y contexto claros","needs_review":false}
 
 Input: "40k del coto"
 Output: {"type":"egreso","amount":40000,"currency":"ARS","category_slug":"alimentacion-supermercado","suggest_new_category":null,"concept":"Compra Coto","payment_method":null,"is_business":false,"notes":null,"ai_confidence":0.85,"ai_reasoning":"Coto = supermercado, k = miles","needs_review":false}
@@ -187,10 +187,10 @@ Input: "alquiler 505 mil"
 Output: {"type":"egreso","amount":505000,"currency":"ARS","category_slug":"vivienda-alquiler","suggest_new_category":null,"concept":"Alquiler mensual","payment_method":"transferencia","is_business":false,"notes":null,"ai_confidence":0.95,"ai_reasoning":"Monto explícito","needs_review":false}
 
 Input: "monotributo 62000"
-Output: {"type":"egreso","amount":62000,"currency":"ARS","category_slug":"gastos-operativos-monotributo","suggest_new_category":null,"concept":"Pago Monotributo","payment_method":null,"is_business":true,"notes":null,"ai_confidence":0.95,"ai_reasoning":"Impuesto del trabajo independiente","needs_review":false}
+Output: {"type":"egreso","amount":62000,"currency":"ARS","category_slug":"operativo-monotributo","suggest_new_category":null,"concept":"Pago Monotributo","payment_method":null,"is_business":true,"notes":null,"ai_confidence":0.95,"ai_reasoning":"Impuesto del trabajo independiente","needs_review":false}
 
 Input: "honorarios 800k"
-Output: {"type":"ingreso","amount":800000,"currency":"ARS","category_slug":"finanzas-y-futuro-honorarios","suggest_new_category":null,"concept":"Honorarios profesionales","payment_method":"transferencia","is_business":false,"notes":null,"ai_confidence":0.9,"ai_reasoning":"Ingreso por servicios","needs_review":false}
+Output: {"type":"ingreso","amount":800000,"currency":"ARS","category_slug":"ingresos-honorarios","suggest_new_category":null,"concept":"Honorarios profesionales","payment_method":"transferencia","is_business":false,"notes":null,"ai_confidence":0.9,"ai_reasoning":"Ingreso por servicios","needs_review":false}
 
 Input: "guarde 100mil para vacaciones"
 Output: {"type":"ahorro","amount":100000,"currency":"ARS","category_slug":"finanzas-y-futuro-ahorro","suggest_new_category":null,"concept":"Ahorro para vacaciones","payment_method":null,"is_business":false,"notes":"Destinado a meta vacaciones","ai_confidence":0.9,"ai_reasoning":"Movimiento de ahorro explícito","needs_review":false}
