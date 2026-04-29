@@ -146,27 +146,104 @@ El registro activo de ai_config con key='classifier_prompt' tiene 2 placeholders
 
 ## 6. Estado actual
 
-**Sesión 1 — Diseño cerrado, implementación pendiente.**
+**Sesión 1 — En curso. Cierre chat 5.**
 
-Hecho ✅:
-- Migration y seed aplicados, verificados, commiteados, pusheados.
-- Setup Node/TS en raíz commiteado y pusheado.
-- Diseño del módulo `lib/import/` cerrado (interfaces, signatures, docs actualizados).
-- Commit `feat(import): diseño del módulo lib/import + decisiones documentadas` pusheado.
+Hecho ✅ (commits en rama dev, no pusheados aún a main):
 
-Pendiente Sesión 1 (próximo chat):
-- Implementar `lib/import/spreadsheet/spreadsheet-adapter.ts` (parser CSV + XLSX).
-- Implementar `lib/import/classify.ts` (llamada a OpenRouter).
-- Implementar `lib/import/run-import.ts` (orquestador con upsert idempotente).
-- Implementar `scripts/import-from-sheet.ts` con preset LAUFAB.
-- Crear `.env` local con credenciales (Supabase + OpenRouter).
-- Correr dry-run del import del Sheet, validar.
-- Correr import real del Sheet, verificar en Supabase.
-- Generar tipos TypeScript de Supabase.
-- Commit final de cierre Sesión 1.
+- `aa0af3b` docs: cierre auditoría sesión 1 + decisiones de implementación importador
+- `192e2da` feat(import): parser de spreadsheet (CSV + XLSX) con multi-locale y external_id determinístico
+- `0edab92` docs(roadmap): UX flow del import en Fase 13 (staging editable + validación previa)
+- `d8e3e42` feat(import): classifier vía OpenRouter Haiku 4.5 + alineación al schema real
 
-Pendiente Sesión 2:
-- Adaptar n8n para escribir a Supabase reutilizando `lib/import/classify.ts`.
+Detalle de lo construido en chat 5:
+
+**lib/import/spreadsheet/** (parser, 100% código determinístico):
+- `parsers/amount.ts`: multi-locale (`AR | US | auto`). Maneja "$ 34.842,00", "1,500.00", "1500", negativos por "-" o "(...)". `Math.abs()` en return porque schema exige `amount > 0`; el signo informa al typeMap, no al monto.
+- `parsers/date.ts`: ISO + 4 fallbacks (`dd/MM/yyyy HH:mm:ss`, `dd/MM/yyyy`, `MM/dd/yyyy`, `yyyy-MM-dd`) + serial Excel.
+- `external-id.ts`: SHA-256 truncado a 16 hex de `${date}|${amount}|${concepto}|${rowIndex}`, formato `${source}_${hash16}`.
+- `spreadsheet-adapter.ts`: detecta CSV vs XLSX por extensión. Tolera filas inválidas (skip + console.warn, no aborta). `readMappedValue` con fallback trim para headers sucios tipo `"Medio "` con espacio.
+
+**lib/import/classify.ts** (LLM puro, único punto con IA):
+- `classify(tx, ctx): ClassificationResult`. Función pura, no toca DB.
+- Retry con backoff 1s/2s/4s en 429/5xx/timeout/network. JSON inválido = error duro, no se reintenta.
+- AbortController de 30s.
+- `replaceAll` para placeholders (importante: aparecen más de una vez en el prompt).
+- Validación estricta del shape del payload del LLM con error específico por campo.
+- `RetryableRequestError` como clase propia para distinguir errores reintenables.
+- Si el LLM devuelve `category_slug` no encontrado en `ctx.categories`: `category_id=null`, `needs_review=true`, anota razón en `ai_reasoning`.
+- Stats globales (`classifyStats` + `resetClassifyStats`): `totalCalls`, `totalTokens`, `totalCostUsd`. El caller (run-import) loguea total al final.
+
+**lib/import/types.ts** (interfaces públicas del módulo):
+- `ColumnMapping` extendido con `source`, `typeMap?`, `dateFormat?`, `amountLocale?`, `defaultCurrency?`.
+- `NormalizedTransaction.type` ahora `TransactionType | null`.
+- Nuevas: `CategoryRef`, `ProfileRef`, `ClassifyContext`.
+
+**Otros**:
+- `package.json`: deps nuevas `exceljs`, `date-fns`. Mantiene csv-parse, supabase-js, dotenv, tsx, typescript.
+- `tsconfig.json`: include extendido a `["scripts/**/*.ts", "lib/**/*.ts"]`.
+- `.gitignore`: agregada línea `.claude/settings.local.json`.
+- `supabase/seed.sql`: placeholders del prompt corregidos (`{{categories_json}}`, agregado bloque `PROFILES DEL HOUSEHOLD: {{profiles_json}}`).
+- ROADMAP.md Fase 13 reescrita: hardening + adaptadores nuevos + UX flow del import (staging editable con validación previa).
+- ARCHITECTURE.md actualizado: split parser/classifier formalizado como decisión arquitectural.
+
+**Anomalías resueltas durante el chat**:
+- Apareció un `CLAUDE.md` en raíz con contenido de Meta Ads / IngeniaSync (no de Saldito). Movido a `C:\Users\fbare\Desktop\CLAUDE-meta-ads-RECUPERADO.md` para no perderlo. Saldito no necesita CLAUDE.md (las reglas para CLI viven en AGENTS.md).
+- Dos placeholders mal escritos en seed.sql (`{{categorias_json}}` con tilde) que rompían el classifier silenciosamente. Corregidos en archivo. Pendiente aplicar el UPDATE manual en Supabase prod (ver bloque "Fix pendiente" más abajo).
+
+**Pendiente Sesión 1 (próximo chat copiloto, chunks 3-7)**:
+
+A) Decisión bloqueante antes de empezar chunk 3 — **mapping persona → profile_id**:
+   El parser lee `tx.person` del Sheet (valores "Laura"/"Fabio" en LAUFAB). El schema exige `transactions.profile_id NOT NULL`. classify es puro y no resuelve este mapping. La decisión la difiere chat 5 al copiloto siguiente porque requiere razonar el contrato del orquestador.
+   Opciones planteadas en chat 5 (no decidir solo, preguntar a Fabio):
+   - a) Match exacto contra `profiles.display_name`. Si no matchea: error log, fila no se inserta.
+   - b) Match con fallback a profile default (owner del household).
+   - c) Match case-insensitive + trim. Si no matchea: error log, fila no se inserta.
+   Voto del copiloto chat 5: opción (c). Decide Fabio en chat 6.
+
+B) Implementar `lib/import/run-import.ts` (orquestador):
+   - Recibe lista de `NormalizedTransaction[]`, `ClassifyContext` y cliente Supabase.
+   - Por cada tx: `classify(tx, ctx)` → resolver `profile_id` (según decisión A) → upsert idempotente a `transactions` con `ON CONFLICT (external_id) DO NOTHING` o `DO UPDATE`. Decidir cuál es el comportamiento (probablemente DO NOTHING para no pisar correcciones manuales del usuario).
+   - Errores en classify (después de 3 retries): insertar fila con `category_id=null`, `needs_review=true`, `ai_reasoning="API error: <msg>"`. Nunca abortar el import.
+   - Logueo: progreso cada 25 filas, total final con costo de OpenRouter.
+   - Soporta `--dry-run`: corre todo en memoria, no toca Supabase, imprime preview de qué se insertaría.
+
+C) Implementar `scripts/import-from-sheet.ts` (wrapper con preset LAUFAB):
+   - Lee `.env` (Supabase URL, SERVICE_ROLE key, OpenRouter key).
+   - Lee de Supabase: prompt activo de `ai_config`, `categories` del household (con todos los campos de `CategoryRef`), `profiles` del household.
+   - Construye `ColumnMapping` específico para el CSV de LAUFAB:
+     - `source: "sheet"`
+     - Columnas: `date="ID-TIME"`, `amount="Importe"`, `type="Tipo"`, `person="Persona"`, `category="Categoría"`, `subcategory="Subcat"`, `concept="Concepto"`, `payment_method="Medio "` (con espacio literal final), `notes="Notas"`.
+     - `typeMap: { "Ingreso": "ingreso", "Egreso": "egreso", "Ahorro": "ahorro", "Transferencia": "transferencia" }` (verificar valores reales del CSV antes).
+     - `dateFormat: "dd/MM/yyyy HH:mm:ss"`.
+     - `amountLocale: "AR"`.
+     - `defaultCurrency: "ARS"`.
+   - Llama a `parseSpreadsheet` → `runImport`.
+   - Soporta flag `--dry-run`.
+
+D) Crear `.env` local (NO commitear, ya está en .gitignore via `.env*.local` y `.env`):
+   - `SUPABASE_URL=...`
+   - `SUPABASE_SERVICE_ROLE_KEY=...` (no la anon, hace falta service role para bypass de RLS en import)
+   - `OPENROUTER_API_KEY=...`
+
+E) **Aplicar manualmente en Supabase Studio** el SQL de fix del prompt (ver bloque "Fix pendiente" en sección 5). Sin esto, classify recibe el prompt roto y va a clasificar mal.
+
+F) Correr dry-run: `npm run import -- --dry-run`. Validar que el preview tiene sentido (montos correctos, fechas ISO, categorías sugeridas razonables).
+
+G) Correr import real: `npm run import`. Verificar en Supabase Studio:
+   - `select count(*) from transactions where source='sheet';` debe dar ~345.
+   - `select count(*) from transactions where source='sheet' and needs_review=true;` ver cuántas quedan para revisar.
+   - `select category_id, count(*) from transactions where source='sheet' group by category_id order by count desc limit 10;` ver distribución.
+
+H) Generar tipos TS de Supabase con `supabase gen types typescript`. Esto requiere Supabase CLI; si no está instalado, dejarlo registrado en pendientes Sesión 3.
+
+I) Commit final de cierre Sesión 1. Mensaje sugerido: `feat(import): orquestador + script LAUFAB + import histórico aplicado`.
+
+J) Merge `dev` → `main`, push.
+
+K) Actualizar CONTEXT.md sección 6 con Sesión 1 completa y armar handoff a Sesión 2 (n8n adaptado).
+
+**Pendiente Sesión 2** (próximo chat después de cerrar Sesión 1):
+Adaptar bot Telegram en n8n para escribir a Supabase reusando `lib/import/classify.ts`. Importante: el bot recibe **lenguaje natural** (texto crudo del usuario), no estructura tabular. La adaptación: en n8n, antes de llamar a classify, armar un `NormalizedTransaction` con `source: "telegram"`, `amount=null`, `type=null`, `concept=mensaje crudo`, `category=null`, `person=lookup por telegram_username`. Classify resuelve todo lo demás. Ese es el diseño plug-in del módulo.
 
 ---
 
@@ -183,4 +260,4 @@ Pendiente Sesión 2:
 
 ---
 
-> Última actualización: cierre auditoría chat 5. Decisiones de implementación cerradas, docs sincronizados. Próximo: implementar lib/import/spreadsheet/.
+> Última actualización: cierre chat 5. Parser + classifier implementados y commiteados (4 commits en dev sin push aún). Próximo chat: chunks 3-7 de Sesión 1 (run-import, script LAUFAB, .env, dry-run, import real, tipos TS, merge a main).
