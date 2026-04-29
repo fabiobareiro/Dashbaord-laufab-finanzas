@@ -7,6 +7,7 @@ export type TransactionType =
 export type TransactionCurrency = "ARS" | "USD";
 
 export interface ColumnMapping {
+  source: string;
   date: string;
   amount: string;
   type: string | null;
@@ -16,6 +17,10 @@ export interface ColumnMapping {
   concept: string | null;
   payment_method: string | null;
   notes: string | null;
+  typeMap?: Record<string, TransactionType>;
+  dateFormat?: string;
+  amountLocale?: "AR" | "US" | "auto";
+  defaultCurrency?: TransactionCurrency;
 }
 
 export interface NormalizedTransaction {
@@ -24,7 +29,7 @@ export interface NormalizedTransaction {
   date: string;
   amount: number;
   currency: TransactionCurrency;
-  type: TransactionType;
+  type: TransactionType | null;
   person: string | null;
   category: string | null;
   subcategory: string | null;

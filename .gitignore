@@ -43,3 +43,4 @@ supabase/.env
 
 # OS
 Thumbs.db
+.claude/settings.local.json
