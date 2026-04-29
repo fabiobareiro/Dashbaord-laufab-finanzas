@@ -84,6 +84,7 @@ Soy **Fabio** (`@fabotrader`). Construyo **Saldito** con mi pareja Laura.
 **Sobre el repo (chat 1)**:
 - Usamos el **mismo repo** clonado (no creamos uno nuevo).
 - Repo en mi máquina, conectado a GitHub remoto, **rama actual `dev`** (no main, posiblemente creada por flujo de n8n previo). A definir si trabajamos en `dev` o pasamos a `main`.
+- **Flujo de ramas**: laburar siempre en `dev`. Mergear a `main` solo en cierres de sesión o features completos. Codex/Claude Code nunca commitea directo a `main` salvo que se le pida explícitamente.
 - Repo todavía privado, **sin commitear los cambios de Sesión 0**.
 - Visibilidad: pasa a **público durante construcción** para que cada chat de Claude.ai pueda leerlo. Pasa a privado al cerrar el MVP.
 - `index.html` viejo se movió a `/legacy/`.
