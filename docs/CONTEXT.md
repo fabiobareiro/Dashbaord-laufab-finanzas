@@ -114,6 +114,22 @@ Reemplaza un Google Sheet + n8n que usamos hoy.
 
 **Tipografía**: Manrope para UI. Mono para números (JetBrains o IBM Plex) se define Sesión 3.
 
+**Sesión 1 — Cierre auditoría e implementación importador**
+
+- **Lib XLSX**: ExcelJS (MIT, npm directo). SheetJS descartado por estar stale en npm.
+- **Lib fechas**: date-fns. Multi-formato configurable.
+- **Parser de monto**: implementación propia multi-locale (`AR | US | auto`). Maneja "$ 34.842,00", "1,500.00", "1500", negativos por "-" o "(...)", símbolos. Sin dep extra.
+- **Parser de fecha**: default `auto` con fallbacks ISO, dd/MM/yyyy HH:mm:ss, dd/MM/yyyy, MM/dd/yyyy, yyyy-MM-dd. Soporta serial Excel.
+- **ColumnMapping extendido** con (todas opcionales salvo `source`): `source`, `typeMap?`, `dateFormat?`, `amountLocale?`, `defaultCurrency?`. `typeMap` resuelve valores crudos ("Egreso"→"egreso") al enum del schema.
+- **NormalizedTransaction.type ahora nullable**. El parser no siempre sabe el tipo (extracto bancario solo trae signo). Classifier confirma con `type_confirmed`.
+- **external_id final**: SHA-256 truncado a 16 hex de `${date}|${amount}|${concepto}|${rowIndex}`, formato `${source}_${hash16}`. Reemplaza fórmula vieja de SCHEMA.md. En Fase 13 se usa ID propio del origen si existe.
+- **Adapter interface formal: NO se crea ahora (YAGNI)**. Funciones públicas son la API. Se extrae cuando aparezcan 2+ adapters.
+- **tsconfig.json include**: `["scripts/**/*.ts", "lib/**/*.ts"]`.
+- **Split parser/classifier (clave)**: parser es 100% código determinístico, classifier es el único con LLM. Una sola implementación de classifier la reusan bot Telegram, quick-add web e import. La IA va donde hay ambigüedad semántica, no donde hay estructura tabular.
+- **n8n NO entra en Sesión 1**. Import histórico es script local one-shot. n8n entra en Sesión 2 reusando `lib/import/classify.ts`.
+- **Herramientas**: Claude Code default Sesión 1. Codex cuando convenga laburo agéntico/libre.
+- **Pendientes Fase 13** (detalle completo en ROADMAP.md): hardening (streaming, límites, sandbox, sanitización CSV injection, job tracking, retry), adaptadores nuevos (bancos AR, apps personales, WhatsApp export, PDFs Vision), UI `/importar` con autodetección y drag-drop. NO se implementa en MVP. Registrado para que próxima sesión lo retome sin sorpresas.
+
 ---
 
 ## 6. Estado actual
@@ -155,4 +171,4 @@ Pendiente Sesión 2:
 
 ---
 
-> Última actualización: cierre chat 4. Diseño módulo import cerrado. Próximo: implementación.
+> Última actualización: cierre auditoría chat 5. Decisiones de implementación cerradas, docs sincronizados. Próximo: implementar lib/import/spreadsheet/.

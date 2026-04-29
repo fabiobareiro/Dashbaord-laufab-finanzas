@@ -192,12 +192,30 @@ A partir de acá ya podés invitar beta testers. Las siguientes fases son agrega
 - Export Excel con tabla dinámica pre-armada.
 - Email automático fin de mes.
 
-## Fase 13 — Adaptadores adicionales + UI `/importar` (semana 6)
+## Fase 13 — Importador completo + UI `/importar` (semana 6)
 
-- Adaptadores adicionales: extractos de bancos AR, billeteras y exports de YNAB/Maybe/Notion.
-- PDFs vía Claude Vision cuando existan muestras reales del origen.
-- UI `/importar` con drag-drop.
-- Autodetección de origen y preview de mapeo.
+**Objetivo**: cualquier usuario llega con su historia (Sheet, Excel, banco, WhatsApp, app vieja) y la sube sin fricción. Migrar es retención.
+
+**Hardening de `lib/import/` (no se hizo en MVP)**:
+- Límites: ~50MB, ~50k filas, timeout por job.
+- Streaming: parser actual carga todo en memoria. Pasar a streaming.
+- Sandbox: timeout + memory cap. Detección zip bombs en XLSX.
+- Sanitización CSV injection: filas que empiezan con `=` `+` `-` `@`.
+- Job tracking persistente: tabla `import_jobs` con progreso y contadores `inserted/skipped/failed/needs_review`.
+- Deduplicación cross-archivo (ya cubierta por `external_id`, UI muestra "X duplicados ignorados").
+- Retry con backoff en classifier (rate limits, 5xx, timeouts).
+
+**Adaptadores nuevos** (cada uno: función `parseX(file): NormalizedTransaction[]`, reusa classifier):
+- Bancos AR: Galicia, BBVA, Santander, Macro, Brubank, Mercado Pago, Naranja X, Ualá.
+- Apps: YNAB, Maybe, Firefly, Notion.
+- WhatsApp export (.txt): caso real frecuente, chat propio como log de gastos.
+- PDFs vía Claude Vision: extractos escaneados, tickets, recibos.
+
+**UI `/importar`**: drag-drop, autodetección de origen, preview de mapeo con corrección manual, progreso en tiempo real, edición post-import (reusa Fase 5).
+
+**Verificación**: subir 3 archivos distintos (Sheet, banco AR, WhatsApp), todos importados con clasificación y `needs_review` en filas dudosas.
+
+**Cómo arrancar**: `docs/sessions/SESSION_13.md`.
 
 ## Fase 14 — Mobile native opcional (mes 2-3)
 

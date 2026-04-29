@@ -82,7 +82,7 @@ Categorías drifteadas → unificada (ver `scripts/import-from-sheet.ts`):
 | Alquiler | `vivienda-alquiler` |
 | Honorarios | `finanzas-y-futuro-honorarios` |
 
-Detección de duplicados: `external_id = sheet_{date}_{amount}_{profileId}`.
+Detección de duplicados: `external_id = ${source}_${hash16}` donde `hash16` es SHA-256 truncado a 16 hex chars de `${date}|${amount}|${concepto}|${rowIndex}`. Para spreadsheet, `source = "sheet"`. Otros adapters (Fase 13) usan ID propio del origen si existe.
 
 ## Aplicar
 

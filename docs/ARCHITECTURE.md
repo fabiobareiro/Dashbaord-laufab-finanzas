@@ -103,13 +103,18 @@ Adapter origen-específico
 ```
 
 Decisiones estructurales:
-- El pipeline no conoce formatos externos. Solo consume una interface `Adapter` que entrega transacciones normalizadas y un `external_id` ya resuelto.
+- El pipeline no conoce formatos externos. Solo consume el contrato de `NormalizedTransaction` con `external_id` ya resuelto. No se define `interface Adapter` formal hasta tener 2+ adapters con shape común (Fase 13).
 - La clasificación usa Claude Haiku 4.5 vía OpenRouter en todas las filas. No hay `CATEGORY_MAP`.
 - Baja confianza no bloquea importación: se inserta con la mejor categoría encontrada y `needs_review=true`.
 - Si el LLM no encuentra categoría existente, devuelve `category_id=null` y `suggest_new_category`; la sugerencia se guarda para revisión posterior.
 - `type` usa exactamente los valores del schema y del prompt: `ingreso | egreso | ahorro | transferencia`.
 - `currency` vive en `NormalizedTransaction` y por ahora se acota a `ARS | USD`; el parser spreadsheet la infiere o default `ARS`.
 - El classifier también devuelve `is_business`, `concept` reescrito, `payment_method` y `type_confirmed` para corregir lo que haya inferido el parser.
+
+Split parser/classifier (decisión arquitectural):
+- El parser es 100% código determinístico, sin IA. Resuelve estructura tabular (fechas, montos, columnas) con regex y libs estándar. Miles de filas en segundos, cero tokens.
+- El classifier es el único punto con LLM. Resuelve semántica (categoría, is_business, type_confirmed). Reutilizado por bot Telegram (Sesión 2), quick-add web (Fase 4) y endpoint /importar (Fase 13).
+- Diseño plug-in: cada origen nuevo (banco, app, WhatsApp export, PDF) es una función `parseX(file): Promise<NormalizedTransaction[]>`. Se diseñan en Fase 13 con muestras reales.
 
 Por qué el parser spreadsheet cubre múltiples orígenes con un solo archivo:
 - Google Sheet, Excel y CSV terminan en la misma abstracción tabular: filas + columnas.
