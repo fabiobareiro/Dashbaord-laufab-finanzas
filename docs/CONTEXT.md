@@ -13,14 +13,19 @@ Reemplaza un Google Sheet + n8n que usamos hoy.
 
 ---
 
-## 2. Reglas de trabajo
+## 2. Reglas de trabajo (CRÍTICAS — respetar siempre)
+
 - Rol: copiloto arquitectural. NO ejecutás. Generás prompts para Claude Code/Codex.
-- Paso por paso. Esperás mi OK antes de seguir.
-- Dudá de todo. No inventés info.
+- **Paso por paso. Esperás mi OK antes de seguir. Sin excepciones.**
+- **Respuestas cortas. Sin listas largas. Sin dramatismo. Al grano.**
+- **Un prompt = una unidad de trabajo. Nunca prompts monstruosos.**
+- Dudá de todo. **No inventés información. No inventés slugs, categorías, ni campos.**
+- Antes de proponer cualquier mapeo o estructura: investigá, leé el repo, pedí auditoría a Codex. No resolvás nada hasta haber investigado.
+- No asumas estructura del repo. Verificá con Codex antes de proponer.
 - No me preguntes lo que tiene solución técnica clara. Solo preguntame UX/branding/plata.
 - Sin botones interactivos. Texto plano siempre.
-- Castellano argentino, tutearme, sin dramatismo, al grano.
-- Toda decisión va a sección 5. Sin excepciones.
+- Castellano argentino, tutearme.
+- **Toda decisión va a sección 5 ANTES de avanzar al siguiente paso. Sin excepciones, sin que te lo recuerde.**
 - Al cerrar chat largo: actualizás este archivo completo y das prompt fluido para el siguiente.
 
 ---
@@ -33,10 +38,11 @@ Reemplaza un Google Sheet + n8n que usamos hoy.
 | DB / Auth / Realtime | Supabase (Postgres) |
 | Hosting | Vercel |
 | Bot + IA | n8n self-hosted + OpenRouter (Claude Haiku 4.5) |
-| LLM Visión (Fase 8) | Claude Vision API |
+| LLM Visión (Fase 8 / Fase 13) | Claude Vision API |
 | Pagos (Fase 10) | Stripe |
 | Email (Fase 10) | Resend |
 | Base SaaS | KolbySisk/next-supabase-stripe-starter |
+| Gestor de paquetes | npm (hasta Sesión 3) |
 
 **Rechazado**: Maybe/Sure, Firefly, Plaid/Belvo, mover bot de n8n, sidebar admin, mobile nativo antes de PWA.
 
@@ -49,12 +55,15 @@ Reemplaza un Google Sheet + n8n que usamos hoy.
 - `docs/PROMPT.md` — prompt clasificador. **Fuente de verdad de slugs.**
 - `docs/BRANDING.md` — paleta, tipografía, logo
 - `docs/CONTEXT.md` — este archivo
+- `docs/ARCHITECTURE.md` — incluye sección "Módulo de import"
+- `lib/import/` — pipeline de importación (módulo core)
+- `lib/import/types.ts` — interfaces y tipos públicos del módulo
+- `package.json` + `tsconfig.json` — setup Node/TypeScript en raíz
 - `supabase/migrations/0001_initial.sql` — migration aplicada ✅
 - `supabase/seed.sql` — seed aplicado ✅
-- `scripts/import-from-sheet.ts` — importación CSV, pendiente correr
-- `context/Finanzas LAUFAB - Registro Google Sheet.csv` — datos históricos
+- `scripts/import-from-sheet.ts` — wrapper del módulo + preset LAUFAB (a implementar)
+- `context/Finanzas LAUFAB - Registro Google Sheet.csv` — datos históricos (345 filas)
 - `context/old-n8n/` — workflows viejos, solo lectura
-- `HANDOFF.md` — obsoleto, ignorar
 
 ---
 
@@ -62,64 +71,86 @@ Reemplaza un Google Sheet + n8n que usamos hoy.
 
 **Repo**: mismo repo clonado, rama dev mergeada a main. Repo público durante construcción. Nunca commitear `.env*`.
 
-**Supabase**: proyecto nuevo `saldito-prod` en São Paulo. No usar el del MCP (es de otro cliente). Schema aplicado via SQL Editor del browser (CLI falla en Codex por entorno no-TTY y Node v20.14). Keys nunca se pasan al copiloto. Seguridad: Data API ON, auto-expose OFF, automatic RLS OFF.
+**Supabase**: proyecto `saldito-prod` en São Paulo. Schema aplicado via SQL Editor del browser. Seguridad: Data API ON, auto-expose OFF, automatic RLS OFF.
 
-**Migration corregida**: bug en `unique(household_id, parent_id, slug)` — no protegía slugs raíz con parent_id=null. Reemplazado por `create unique index idx_categories_household_parent_slug on categories(household_id, coalesce(parent_id::text, ''), slug)`.
+**DB verificada en prod**: households=1, profiles=2, accounts=2, categories=45, ai_config=1, transactions=0. RLS, triggers y Realtime activos.
 
-**Slugs**: fuente de verdad = `docs/PROMPT.md`. Corregidos en seed: `alimentacion-salidas-cafeteria→alimentacion-cafeteria`, `finanzas-y-futuro-honorarios→ingresos-honorarios`, `gastos-operativos-monotributo→operativo-monotributo`.
+**Migration corregida**: bug en `unique(household_id, parent_id, slug)` — no protegía slugs raíz con parent_id=null. Reemplazado por índice con `coalesce(parent_id::text, '')`. Ya commiteado y pusheado.
 
-**DB verificada**: households=1, profiles=2, accounts=2, categories=45, ai_config=1. RLS, triggers y Realtime activos.
+**Slugs alineados a PROMPT.md**: `alimentacion-salidas-cafeteria→alimentacion-cafeteria`, `finanzas-y-futuro-honorarios→ingresos-honorarios`, `gastos-operativos-monotributo→operativo-monotributo`. Ya commiteado y pusheado.
 
-**Multi-tenant y SaaS**: schema escala a miles de usuarios sin cambios. Auth via `auth_user_id` en profiles (se activa Sesión 3). Accounts del seed son solo demo. Categorías por household (compartidas entre miembros, no por perfil). Idioma: español latinoamericano neutro, inglés en Fase 10+. Tabla `subscriptions` ya existe, se activa Fase 10 con Stripe.
+**Multi-tenant y SaaS**: schema escala a miles de usuarios sin cambios. Auth via `auth_user_id` en profiles (se activa Sesión 3). Categorías por household (compartidas entre miembros). Idioma: español latinoamericano neutro. Tabla `subscriptions` ya existe, se activa Fase 10.
 
-**Node.js local**: v20.14 — actualizar a v20.17+ antes de correr scripts locales.
+**Tracking histórico**: requerimiento confirmado. El usuario quiere consultar finanzas desde el inicio del sistema, años atrás. Soft delete siempre. `occurred_at` con timestamptz.
+
+**Importador como feature core (no script descartable)**: cualquier usuario nuevo llega con su historia (Sheet, Excel, Notion, banco, app vieja). Sin tracking desde el día 1 no hay retención. **Migración sin fricción es retención** — mismo principio que aplicó Claude para que la gente migrara desde ChatGPT. El importador es el speech del producto, no un utilitario.
+
+**Pipeline único de import**: `parser → NormalizedTransaction → classifier (LLM) → upsert idempotente`. Lo usa el script de migración (Sesión 1), bot n8n (Sesión 2 reutiliza classifier), quick-add web (Fase 4) y endpoint `/importar` (Fase 13).
+
+**Clasificación — Opción B confirmada**: TODAS las filas pasan por LLM Haiku 4.5 vía OpenRouter. Cero CATEGORY_MAP arbitrario. Cero slugs hardcodeados. Costo estimado <USD 2 para el Sheet de Fabio (345 filas).
+
+**Reglas de clasificación**:
+- Row-por-row, una sola función `classify(tx)`. Sin batch.
+- Baja confianza: insertar igual con la mejor categoría del LLM + `needs_review=true`.
+- Si LLM devuelve `category_id=null` + `suggest_new_category`: guardar la sugerencia, `category_id` queda null. NO se crea categoría en caliente.
+
+**Parser implementado en Sesión 1: `spreadsheet`** (CSV + XLSX). Recibe un `ColumnMapping` que dice qué columna del archivo es cada campo. Cubre Google Sheet, Excel y CSV con un solo archivo. Sirve para LAUFAB ahora y para cualquier usuario que llegue con su planilla en Fase 13.
+
+**Preset LAUFAB**: vive en `scripts/import-from-sheet.ts`, NO en el módulo. El módulo es genérico.
+
+**external_id de spreadsheet**: hash determinístico de `(YYYY-MM-DD + amount + concepto + row_index)`. El `row_index` garantiza que dos transacciones idénticas el mismo día no se pisen.
+
+**Adaptadores futuros (Fase 13)**: bancos AR (Galicia, BBVA, Santander, Macro, Brubank, Mercado Pago, Naranja X, Ualá), exports (YNAB, Maybe, Firefly, Notion), PDFs vía Claude Vision. **NO se diseñan en abstracto**. Se diseñan cuando tengamos archivos reales en mano. Por eso en Sesión 1 NO se crean stubs.
+
+**Ubicación del módulo**: `lib/import/` en raíz. En Sesión 3 se mueve a `src/lib/import/` cuando se inicialice Next.js (`git mv` + ajuste de imports).
+
+**Setup Node/TS en raíz**: `package.json` + `tsconfig.json` creados. Deps: `@supabase/supabase-js`, `csv-parse`, `dotenv`, `tsx`, `typescript`, `@types/node`. Gestor: npm. Si Sesión 3 (KolbySisk) pide pnpm, se instala ahí.
+
+**Diseño del módulo cerrado**: ver `lib/import/types.ts` y `docs/ARCHITECTURE.md` sección "Módulo de import". Interfaces: `Adapter`, `ColumnMapping`, `NormalizedTransaction`, `ClassificationResult`. Funciones públicas: `parseSpreadsheet`, `classify`, `runImport`. Tipos en español alineados al schema (`ingreso | egreso | ahorro | transferencia`). Currency `ARS | USD` con default ARS para spreadsheet.
+
+**Node.js local**: v20.14 — actualizar a v20.17+ antes de Sesión 3.
 
 **Tipografía**: Manrope para UI. Mono para números (JetBrains o IBM Plex) se define Sesión 3.
-
-**Importador**: feature core del producto, no script descartable. La misma lógica base se reutiliza entre el script de migración de Sesión 1, el bot de Telegram en Sesión 2 (reutiliza classifier), el quick-add web de Fase 4 y el endpoint `/importar` de Fase 13.
-
-**Pipeline de import**: `parser -> NormalizedTransaction -> classifier LLM -> upsert idempotente`. El pipeline es genérico y los orígenes nuevos entran vía una interface `Adapter` sin tocar la lógica central.
-
-**Clasificación de imports**: Opción B confirmada. Todas las filas pasan row-by-row por Claude Haiku 4.5 vía OpenRouter. Cero `CATEGORY_MAP`. Si la confianza es baja, se inserta con la mejor categoría disponible y `needs_review=true`. Si el LLM devuelve `category_id=null` y `suggest_new_category`, se guarda la sugerencia y `category_id` queda `null`.
-
-**Spreadsheet parser**: en Sesión 1 se implementa solo parser spreadsheet (`CSV + XLSX`). Cubre el Sheet de LAUFAB y también futuras planillas de usuarios mediante `ColumnMapping { date, amount, type, person, category, subcategory, concept, payment_method, notes }`. No se crean stubs de Mercado Pago, YNAB, bancos ni billeteras: eso se diseña en Fase 13 con archivos reales en mano.
-
-**Preset LAUFAB**: el mapping específico de la hoja histórica vive como constante en el script de importación, no dentro del módulo genérico.
-
-**external_id de spreadsheet**: hash determinístico de `(YYYY-MM-DD + amount + concepto + row_index)`. Para futuros parsers la interface exige `external_id: string`, pero cada adaptador define su estrategia cuando existan muestras reales del origen.
-
-**Ubicación del módulo**: vive en `lib/import/` raíz por ahora. Cuando Sesión 3 inicialice Next.js, se mueve a `src/lib/import/` con `git mv` y ajuste de imports.
-
-**Gestor de paquetes**: `npm`. Si en Sesión 3 el starter `KolbySisk` exige `pnpm`, recién ahí se instala.
-
-**Anti-patrón nuevo**: el copiloto no asume estructura del repo ni formato de orígenes externos. Antes de proponer diseño o parser, primero audita el repo o pide muestras reales.
 
 ---
 
 ## 6. Estado actual
-**Sesión 1 — parcialmente completa.**
 
-Hecho:
-- Migration y seed aplicados y verificados en Supabase prod ✅
+**Sesión 1 — Diseño cerrado, implementación pendiente.**
 
-Pendiente Sesión 1:
-- Revisar y correr `scripts/import-from-sheet.ts` con el CSV histórico
-- Generar tipos TypeScript
-- Commit `feat(db): initial schema, seeds, import from sheet`
+Hecho ✅:
+- Migration y seed aplicados, verificados, commiteados, pusheados.
+- Setup Node/TS en raíz commiteado y pusheado.
+- Diseño del módulo `lib/import/` cerrado (interfaces, signatures, docs actualizados).
+- Commit `feat(import): diseño del módulo lib/import + decisiones documentadas` pusheado.
+
+Pendiente Sesión 1 (próximo chat):
+- Implementar `lib/import/spreadsheet/spreadsheet-adapter.ts` (parser CSV + XLSX).
+- Implementar `lib/import/classify.ts` (llamada a OpenRouter).
+- Implementar `lib/import/run-import.ts` (orquestador con upsert idempotente).
+- Implementar `scripts/import-from-sheet.ts` con preset LAUFAB.
+- Crear `.env` local con credenciales (Supabase + OpenRouter).
+- Correr dry-run del import del Sheet, validar.
+- Correr import real del Sheet, verificar en Supabase.
+- Generar tipos TypeScript de Supabase.
+- Commit final de cierre Sesión 1.
 
 Pendiente Sesión 2:
-- Adaptar n8n para escribir a Supabase (lookup dinámico, insert idempotente)
+- Adaptar n8n para escribir a Supabase reutilizando `lib/import/classify.ts`.
 
 ---
 
 ## 7. Anti-patrones
-- Botones para preguntas. Texto plano siempre.
-- Asumir contenido del repo sin leerlo.
-- Decisiones sin documentar en sección 5.
-- `npx supabase login` desde Codex — no funciona. Usar SQL Editor del browser.
-- Pasar keys de Supabase al copiloto.
-- Prompts cortos para el próximo chat.
+- Respuestas largas con muchas listas. Texto plano, corto, al grano.
+- Prompts monstruosos para Codex. Una unidad de trabajo por prompt.
+- Inventar slugs, categorías, campos o estructuras de archivos sin verificar.
+- Asumir contenido del repo o formato de orígenes externos sin auditar.
+- Diseñar adaptadores de import sin tener archivos reales del origen.
+- Decisiones sin documentar en sección 5 — esto se hace SIEMPRE, sin recordatorio.
+- Crear stubs de adaptadores futuros "por las dudas". Solo lo que se implementa ahora.
+- `npx supabase login` desde Codex — no funciona.
+- Pasar keys de Supabase u OpenRouter al copiloto.
 
 ---
 
-> Última actualización: cierre chat 2. DB aplicada ✅. Pendiente: import CSV + tipos TS + Sesión 2.
+> Última actualización: cierre chat 4. Diseño módulo import cerrado. Próximo: implementación.
