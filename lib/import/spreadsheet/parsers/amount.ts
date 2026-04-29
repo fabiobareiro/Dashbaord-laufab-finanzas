@@ -76,5 +76,7 @@ export function parseAmount(
     throw new Error(`Invalid amount: ${originalRaw}`);
   }
 
-  return isNegative ? -amount : amount;
+  // Schema requires amount > 0; sign info should live in `type` (ingreso/egreso).
+  // Parser returns absolute value; the sign hint can be used by typeMap if needed.
+  return Math.abs(amount);
 }

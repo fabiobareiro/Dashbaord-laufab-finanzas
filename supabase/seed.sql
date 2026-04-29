@@ -153,8 +153,11 @@ REGLAS DURAS:
 
 PERSONA ACTUAL: {{persona_actual}}
 
+PROFILES DEL HOUSEHOLD:
+{{profiles_json}}
+
 CATEGORIES_AVAILABLE:
-{{categorias_json}}
+{{categories_json}}
 
 ÚLTIMOS 5 MENSAJES DE ESTA PERSONA:
 {{last_messages}}

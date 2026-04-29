@@ -130,6 +130,18 @@ Reemplaza un Google Sheet + n8n que usamos hoy.
 - **Herramientas**: Claude Code default Sesión 1. Codex cuando convenga laburo agéntico/libre.
 - **Pendientes Fase 13** (detalle completo en ROADMAP.md): hardening (streaming, límites, sandbox, sanitización CSV injection, job tracking, retry), adaptadores nuevos (bancos AR, apps personales, WhatsApp export, PDFs Vision), UI `/importar` con autodetección y drag-drop. NO se implementa en MVP. Registrado para que próxima sesión lo retome sin sorpresas.
 
+**Sincronización Supabase prod ↔ repo (decisión arquitectural)**
+Supabase prod no está conectado a Claude Code ni a Codex. Las migrations y el seed se aplican manualmente desde el SQL Editor del navegador en Supabase. Esto significa:
+
+El estado real de la DB en prod puede divergir del repo si se aplican fixes solo en el archivo SQL pero no se ejecutan en Supabase.
+Cualquier cambio a supabase/migrations/*.sql o supabase/seed.sql que modifique datos vivos requiere ejecución manual en Supabase Studio.
+Para datos puntuales (ej. corregir un registro de ai_config), se documenta el SQL de fix en este CONTEXT y se aplica vía SQL Editor.
+Verificación post-fix: query directa desde Studio para confirmar que el cambio impactó.
+En Fase 3+ (cuando exista app Next.js), evaluar mover a Supabase CLI con migrations versionadas y comando deploy. Por ahora flujo manual.
+
+**Fix pendiente de aplicar manual en Supabase prod (decisión chat 5):**
+El registro activo de ai_config con key='classifier_prompt' tiene 2 placeholders mal escritos: {{categorias_json}} (debe ser {{categories_json}}) y falta el bloque PROFILES DEL HOUSEHOLD: {{profiles_json}}. El archivo seed.sql se corrige en este chunk; queda pendiente aplicar el UPDATE manual en Supabase antes del import real (chunk 6/7 de Sesión 1).
+
 ---
 
 ## 6. Estado actual

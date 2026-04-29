@@ -56,3 +56,27 @@ export interface ClassificationResult {
   payment_method: string | null;
   type_confirmed: TransactionType;
 }
+
+export interface CategoryRef {
+  id: string;
+  slug: string;
+  name: string;
+  type: TransactionType;
+  is_business: boolean;
+}
+
+export interface ProfileRef {
+  id: string;
+  display_name: string;
+  telegram_username: string | null;
+}
+
+export interface ClassifyContext {
+  promptTemplate: string;
+  categories: CategoryRef[];
+  profiles: ProfileRef[];
+  lastMessages: string[];
+  currentProfileName: string;
+  apiKey: string;
+  model?: string;
+}
