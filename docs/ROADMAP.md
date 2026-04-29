@@ -211,7 +211,18 @@ A partir de acá ya podés invitar beta testers. Las siguientes fases son agrega
 - WhatsApp export (.txt): caso real frecuente, chat propio como log de gastos.
 - PDFs vía Claude Vision: extractos escaneados, tickets, recibos.
 
-**UI `/importar`**: drag-drop, autodetección de origen, preview de mapeo con corrección manual, progreso en tiempo real, edición post-import (reusa Fase 5).
+**Flujo de UI `/importar`** (UX crítico — definido en chat 5):
+1. Usuario sube archivo (drag-drop). Autodetección de origen (extensión + heurística).
+2. Preview de mapeo de columnas: el sistema sugiere mapping, usuario corrige drag-and-drop si hace falta.
+3. Sistema parsea + clasifica con LLM. Progreso en tiempo real.
+4. **Pantalla de staging editable**: tabla con TODAS las filas procesadas. Usuario puede editar fecha, monto, persona, categoría, subcategoría, concepto, payment_method, notes. Puede marcar filas para excluir. Filas que llegaron con `needs_review=true` aparecen destacadas.
+5. **Validación mínima por fila**: fecha + monto son obligatorios. Sin esos dos no se puede trackear, fila se descarta automáticamente con aviso al usuario.
+6. **Botón "Validar y aplicar"**: solo cuando el usuario confirma, las filas pasan a `transactions` definitivo. Hasta ese momento viven en staging.
+7. Idempotencia por `external_id` permite que el usuario suba más archivos después sin duplicar (extracto del mes siguiente, otro origen, corrección).
+
+**Decisión técnica pendiente Fase 13**: staging vivo en tabla nueva `import_staging` vs filtro `pending_review` sobre `transactions`. Se decide con prototipo en mano. Lo que importa: el dato no aparece en el dashboard hasta que el usuario confirma.
+
+**Por qué este flujo**: el import es la puerta de entrada al producto. Cero fricción para migrar (importar todo lo que tengo en otras apps/sheets/bancos), pero cero compromiso ciego (puedo revisar y corregir antes de que afecte mi dashboard). Una vez confirmado queda como histórico real. Imports posteriores se suman, nunca pisan.
 
 **Verificación**: subir 3 archivos distintos (Sheet, banco AR, WhatsApp), todos importados con clasificación y `needs_review` en filas dudosas.
 
